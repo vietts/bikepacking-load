@@ -1,0 +1,158 @@
+[
+  {
+    "id": "tge",
+    "name": "The Grand Escape",
+    "type": "road",
+    "isBAS": true,
+    "description": "~550 km road bikepacking. 3-5 days, 100% paved. B&Bs and hotels available.",
+    "recommendedWeight": { "min": 5, "max": 8 },
+    "maxAcceptableWeight": 12,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "pump", "id_docs", "credit_card", "health_card", "chamois_cream", "sunscreen"],
+    "unnecessaryItems": ["sleeping_bag", "sleeping_pad", "tent", "tarp", "stove", "cooking_pot"],
+    "tips": [
+      "You won't need a tent or sleeping bag — there are B&Bs and hotels along the entire route.",
+      "Pack light! Most TGE riders carry 5-7 kg of gear.",
+      "A handlebar + frame + saddle bag setup is all you need."
+    ]
+  },
+  {
+    "id": "tt",
+    "name": "Tuscany Trail",
+    "type": "gravel",
+    "isBAS": true,
+    "description": "~440 km gravel. Mix of gravel roads and tarmac through Tuscan hills. Bivouac possible.",
+    "recommendedWeight": { "min": 7, "max": 10 },
+    "maxAcceptableWeight": 15,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "tubeless_kit", "pump", "id_docs", "credit_card", "health_card", "chamois_cream", "sunscreen", "spare_shorts", "spare_jersey"],
+    "unnecessaryItems": ["stove", "cooking_pot"],
+    "tips": [
+      "Many riders bivouac on the Tuscany Trail — a lightweight sleeping bag makes a big difference.",
+      "Gravel is harder on tires — bring a complete repair kit including tubeless plugs.",
+      "Expect more dirt and sweat — an extra set of clothes is worth the weight."
+    ]
+  },
+  {
+    "id": "nc4000",
+    "name": "NorthCape4000",
+    "type": "ultra",
+    "isBAS": true,
+    "description": "~4,000 km from Italy to North Cape. Self-paced ultra over weeks. All weather conditions.",
+    "recommendedWeight": { "min": 5, "max": 8 },
+    "maxAcceptableWeight": 10,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_20k", "powerbank_10k", "charging_cables", "lights", "backup_light", "multitool", "spare_tubes", "tubeless_kit", "pump", "chain_links", "id_docs", "credit_card", "health_card", "chamois_cream", "sunscreen", "spare_shorts", "spare_jersey", "spare_underwear", "spare_socks", "thermal_layer", "long_gloves", "buff"],
+    "unnecessaryItems": ["tent", "stove", "cooking_pot", "casual_pants", "casual_tshirt"],
+    "tips": [
+      "Every gram counts on the NC4000 — but weather changes 10 times a day.",
+      "A bigger powerbank (20000mAh) is essential for weeks of riding.",
+      "Backup lights are a must — Nordic nights are unpredictable.",
+      "Ultra-light is the goal, but don't skip warm layers."
+    ]
+  },
+  {
+    "id": "ffp",
+    "name": "Final Frontier Patagonia",
+    "type": "expedition",
+    "isBAS": true,
+    "description": "~2,700 km gravel through Patagonia. Full self-sufficiency required. Remote terrain.",
+    "recommendedWeight": { "min": 10, "max": 15 },
+    "maxAcceptableWeight": 20,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_20k", "powerbank_10k", "charging_cables", "lights", "backup_light", "multitool", "spare_tubes", "tubeless_kit", "pump", "chain_links", "tape", "zip_ties", "id_docs", "credit_card", "health_card", "chamois_cream", "sunscreen", "spare_shorts", "spare_jersey", "spare_underwear", "spare_socks", "thermal_layer", "long_gloves", "buff", "sleeping_bag", "sleeping_pad", "tent", "stove", "cooking_pot", "first_aid_kit"],
+    "unnecessaryItems": [],
+    "tips": [
+      "Patagonia means full self-sufficiency — you need everything including shelter and cooking gear.",
+      "Wind is the main challenge. Make sure your bags are secured tightly.",
+      "Carry enough food and water capacity for long stretches between resupply points."
+    ]
+  },
+  {
+    "id": "unpaved",
+    "name": "Unpaved Roads",
+    "type": "weekend",
+    "isBAS": true,
+    "description": "Short 1-2 day gravel weekend events. Minimal gear needed.",
+    "recommendedWeight": { "min": 3, "max": 5 },
+    "maxAcceptableWeight": 7,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "pump", "id_docs", "credit_card", "health_card", "chamois_cream", "sunscreen"],
+    "unnecessaryItems": ["sleeping_bag", "sleeping_pad", "tent", "tarp", "stove", "cooking_pot", "casual_pants", "casual_tshirt", "towel"],
+    "tips": [
+      "This is almost a day ride — pack minimal and enjoy the ride.",
+      "Handlebar bag + frame bag is plenty for a weekend.",
+      "Focus on repair kit and weather protection."
+    ]
+  },
+  {
+    "id": "generic_weekend",
+    "name": "Weekend Trip",
+    "type": "weekend",
+    "isBAS": false,
+    "description": "A short 1-2 day ride. Light packing, focus on essentials.",
+    "recommendedWeight": { "min": 3, "max": 5 },
+    "maxAcceptableWeight": 8,
+    "essentialItems": ["rain_jacket", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "pump", "id_docs"],
+    "unnecessaryItems": ["tent", "stove", "cooking_pot"],
+    "tips": [
+      "Keep it light — you'll thank yourself on the climbs.",
+      "Focus on essentials: repair kit, rain jacket, snacks."
+    ]
+  },
+  {
+    "id": "generic_multiday_road",
+    "name": "Multi-Day Road",
+    "type": "road",
+    "isBAS": false,
+    "description": "3-7 day road bikepacking. Hotels and shops available for resupply.",
+    "recommendedWeight": { "min": 5, "max": 8 },
+    "maxAcceptableWeight": 12,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "pump", "id_docs", "credit_card", "chamois_cream"],
+    "unnecessaryItems": ["tent", "stove", "cooking_pot"],
+    "tips": [
+      "On paved roads, you'll find accommodation and food easily.",
+      "Focus on keeping weight low for faster, more enjoyable riding."
+    ]
+  },
+  {
+    "id": "generic_multiday_gravel",
+    "name": "Multi-Day Gravel",
+    "type": "gravel",
+    "isBAS": false,
+    "description": "3-7 day gravel adventure. May need bivouac gear depending on route.",
+    "recommendedWeight": { "min": 7, "max": 10 },
+    "maxAcceptableWeight": 15,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_10k", "charging_cables", "lights", "multitool", "spare_tubes", "tubeless_kit", "pump", "id_docs", "credit_card", "chamois_cream", "spare_shorts"],
+    "unnecessaryItems": [],
+    "tips": [
+      "Gravel means more tire issues — bring a solid repair kit.",
+      "Consider a sleeping bag if your route has limited accommodation."
+    ]
+  },
+  {
+    "id": "generic_ultra",
+    "name": "Ultra-Distance",
+    "type": "ultra",
+    "isBAS": false,
+    "description": "1000+ km self-supported. Ultra-light but prepared for all conditions.",
+    "recommendedWeight": { "min": 5, "max": 8 },
+    "maxAcceptableWeight": 10,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_20k", "charging_cables", "lights", "backup_light", "multitool", "spare_tubes", "pump", "chain_links", "id_docs", "credit_card", "chamois_cream", "spare_shorts", "thermal_layer"],
+    "unnecessaryItems": ["casual_pants", "casual_tshirt", "towel"],
+    "tips": [
+      "Every gram counts. Be ruthless about what you pack.",
+      "Bigger powerbank is essential for multi-day charging."
+    ]
+  },
+  {
+    "id": "generic_expedition",
+    "name": "Expedition",
+    "type": "expedition",
+    "isBAS": false,
+    "description": "Remote, multi-week, full self-sufficiency. Carry shelter, cooking, all supplies.",
+    "recommendedWeight": { "min": 10, "max": 15 },
+    "maxAcceptableWeight": 20,
+    "essentialItems": ["rain_jacket", "wind_vest", "gps", "smartphone", "powerbank_20k", "powerbank_10k", "charging_cables", "lights", "backup_light", "multitool", "spare_tubes", "tubeless_kit", "pump", "chain_links", "tape", "zip_ties", "id_docs", "credit_card", "chamois_cream", "spare_shorts", "spare_jersey", "thermal_layer", "long_gloves", "sleeping_bag", "sleeping_pad", "tent", "stove", "cooking_pot", "first_aid_kit"],
+    "unnecessaryItems": [],
+    "tips": [
+      "Self-sufficiency is key — bring everything you need to survive.",
+      "Plan your resupply points carefully."
+    ]
+  }
+]

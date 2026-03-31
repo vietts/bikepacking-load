@@ -1,0 +1,37 @@
+[
+  {
+    "type": "road",
+    "label": "Road Bike",
+    "description": "Lightweight and fast. Limited bag mounts but great for road events like TGE.",
+    "defaultWeight": 8,
+    "frameBagMaxVolume": { "XS": 3, "S": 3.5, "M": 4.5, "L": 5.5, "XL": 6 }
+  },
+  {
+    "type": "gravel",
+    "label": "Gravel Bike",
+    "description": "The most popular choice for BAS events. Multiple bag mounts, versatile geometry.",
+    "defaultWeight": 9.5,
+    "frameBagMaxVolume": { "XS": 3.5, "S": 4, "M": 5, "L": 6, "XL": 7 }
+  },
+  {
+    "type": "touring",
+    "label": "Touring Bike",
+    "description": "Built for carrying heavy loads. Front and rear racks, maximum capacity.",
+    "defaultWeight": 13.5,
+    "frameBagMaxVolume": { "XS": 3, "S": 3.5, "M": 4.5, "L": 5.5, "XL": 6 }
+  },
+  {
+    "type": "mtb_hardtail",
+    "label": "MTB Hardtail",
+    "description": "Tough and capable off-road. Some riders use these for gravel events.",
+    "defaultWeight": 11.5,
+    "frameBagMaxVolume": { "XS": 3, "S": 3.5, "M": 4, "L": 5, "XL": 5.5 }
+  },
+  {
+    "type": "mtb_full",
+    "label": "MTB Full Suspension",
+    "description": "Maximum off-road comfort but less space for bags. Rare for bikepacking.",
+    "defaultWeight": 13.5,
+    "frameBagMaxVolume": { "XS": 2, "S": 2.5, "M": 3, "L": 3.5, "XL": 4 }
+  }
+]

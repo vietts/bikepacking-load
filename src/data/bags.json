@@ -1,0 +1,186 @@
+[
+  {
+    "id": "handlebar_generic_s",
+    "type": "handlebar",
+    "label": "Handlebar Bag S",
+    "position": "front_high",
+    "volume": 8,
+    "maxWeight": 3
+  },
+  {
+    "id": "handlebar_generic_m",
+    "type": "handlebar",
+    "label": "Handlebar Bag M",
+    "position": "front_high",
+    "volume": 11,
+    "maxWeight": 4
+  },
+  {
+    "id": "handlebar_generic_l",
+    "type": "handlebar",
+    "label": "Handlebar Bag L",
+    "position": "front_high",
+    "volume": 15,
+    "maxWeight": 5
+  },
+  {
+    "id": "handlebar_apidura",
+    "type": "handlebar",
+    "label": "Apidura Expedition",
+    "position": "front_high",
+    "volume": 14,
+    "maxWeight": 5,
+    "brand": "Apidura",
+    "model": "Expedition Handlebar Pack"
+  },
+  {
+    "id": "handlebar_restrap",
+    "type": "handlebar",
+    "label": "Restrap Bar Bag",
+    "position": "front_high",
+    "volume": 17,
+    "maxWeight": 5,
+    "brand": "Restrap",
+    "model": "Bar Bag"
+  },
+  {
+    "id": "handlebar_ortlieb",
+    "type": "handlebar",
+    "label": "Ortlieb Handlebar Pack",
+    "position": "front_high",
+    "volume": 15,
+    "maxWeight": 5,
+    "brand": "Ortlieb",
+    "model": "Handlebar-Pack QR"
+  },
+  {
+    "id": "frame_generic_s",
+    "type": "frame",
+    "label": "Frame Bag S",
+    "position": "center_low",
+    "volume": 3,
+    "maxWeight": 3
+  },
+  {
+    "id": "frame_generic_m",
+    "type": "frame",
+    "label": "Frame Bag M",
+    "position": "center_low",
+    "volume": 5,
+    "maxWeight": 4
+  },
+  {
+    "id": "frame_generic_l",
+    "type": "frame",
+    "label": "Frame Bag L",
+    "position": "center_low",
+    "volume": 8,
+    "maxWeight": 5
+  },
+  {
+    "id": "frame_apidura",
+    "type": "frame",
+    "label": "Apidura Expedition",
+    "position": "center_low",
+    "volume": 5.3,
+    "maxWeight": 4,
+    "brand": "Apidura",
+    "model": "Expedition Frame Pack"
+  },
+  {
+    "id": "frame_miss_grape",
+    "type": "frame",
+    "label": "Miss Grape Cluster",
+    "position": "center_low",
+    "volume": 4.4,
+    "maxWeight": 4,
+    "brand": "Miss Grape",
+    "model": "Cluster 20"
+  },
+  {
+    "id": "saddle_generic_s",
+    "type": "saddle",
+    "label": "Saddle Bag S",
+    "position": "rear_mid",
+    "volume": 8,
+    "maxWeight": 3
+  },
+  {
+    "id": "saddle_generic_m",
+    "type": "saddle",
+    "label": "Saddle Bag M",
+    "position": "rear_mid",
+    "volume": 11,
+    "maxWeight": 4
+  },
+  {
+    "id": "saddle_generic_l",
+    "type": "saddle",
+    "label": "Saddle Bag L",
+    "position": "rear_mid",
+    "volume": 16,
+    "maxWeight": 5
+  },
+  {
+    "id": "saddle_apidura",
+    "type": "saddle",
+    "label": "Apidura Expedition",
+    "position": "rear_mid",
+    "volume": 14,
+    "maxWeight": 5,
+    "brand": "Apidura",
+    "model": "Expedition Saddle Pack"
+  },
+  {
+    "id": "saddle_restrap",
+    "type": "saddle",
+    "label": "Restrap Seat Pack",
+    "position": "rear_mid",
+    "volume": 14,
+    "maxWeight": 5,
+    "brand": "Restrap",
+    "model": "Saddle Bag"
+  },
+  {
+    "id": "top_tube_generic",
+    "type": "top_tube",
+    "label": "Top Tube Bag",
+    "position": "top",
+    "volume": 1,
+    "maxWeight": 0.75
+  },
+  {
+    "id": "top_tube_apidura",
+    "type": "top_tube",
+    "label": "Apidura Top Tube",
+    "position": "top",
+    "volume": 1,
+    "maxWeight": 0.75,
+    "brand": "Apidura",
+    "model": "Racing Top Tube Pack"
+  },
+  {
+    "id": "fork_generic",
+    "type": "fork",
+    "label": "Fork Cargo Cages (pair)",
+    "position": "front_low",
+    "volume": 4,
+    "maxWeight": 3
+  },
+  {
+    "id": "fork_anything_cage",
+    "type": "fork",
+    "label": "Anything Cages + Dry Bags",
+    "position": "front_low",
+    "volume": 6,
+    "maxWeight": 4
+  },
+  {
+    "id": "rear_rack_generic",
+    "type": "rear_rack",
+    "label": "Rear Rack + Panniers",
+    "position": "rear_mid",
+    "volume": 40,
+    "maxWeight": 15
+  }
+]
