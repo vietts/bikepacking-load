@@ -1,7 +1,9 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react'
 import type { Bike, BikeEvent, Bag, WizardState } from '../types'
+import { deserializeState } from '../utils/url-state'
 
 const TOTAL_STEPS = 6
+const STORAGE_KEY = 'bas-bike-load:v1'
 
 type WizardAction =
   | { type: 'SET_STEP'; step: number }
@@ -15,13 +17,39 @@ type WizardAction =
   | { type: 'UPDATE_ITEM_WEIGHT'; itemId: string; weight: number }
   | { type: 'UPDATE_ITEM_VOLUME'; itemId: string; volume: number }
   | { type: 'RESTORE_STATE'; state: WizardState }
+  | { type: 'RESET' }
 
-const initialState: WizardState = {
+const emptyState: WizardState = {
   step: 1,
   bike: null,
   event: null,
   bags: [],
   selectedItems: [],
+}
+
+function loadInitialState(): WizardState {
+  // 1. URL hash takes precedence (shared link)
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash
+    const match = hash.match(/config=([^&]+)/)
+    if (match) {
+      const restored = deserializeState(match[1])
+      if (restored) {
+        return { step: 5, bike: restored.bike, event: restored.event, bags: restored.bags, selectedItems: restored.selectedItems }
+      }
+    }
+  }
+  // 2. localStorage (resume in-progress flow)
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as WizardState
+        if (parsed && typeof parsed.step === 'number') return parsed
+      }
+    } catch { /* ignore */ }
+  }
+  return emptyState
 }
 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
@@ -85,6 +113,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       }
     case 'RESTORE_STATE':
       return action.state
+    case 'RESET':
+      return emptyState
     default:
       return state
   }
@@ -97,16 +127,36 @@ interface WizardContextType {
   prevStep: () => void
   goToStep: (step: number) => void
   canProceed: () => boolean
+  reset: () => void
 }
 
 const WizardContext = createContext<WizardContextType | null>(null)
 
 export function WizardProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(wizardReducer, initialState)
+  const [state, dispatch] = useReducer(wizardReducer, undefined, loadInitialState)
+
+  // Persist to localStorage whenever state changes (skip empty initial state)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (state.step === 1 && !state.bike && !state.event && state.bags.length === 0 && state.selectedItems.length === 0) {
+      window.localStorage.removeItem(STORAGE_KEY)
+      return
+    }
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    } catch { /* quota or private mode — ignore */ }
+  }, [state])
 
   const nextStep = () => dispatch({ type: 'SET_STEP', step: state.step + 1 })
   const prevStep = () => dispatch({ type: 'SET_STEP', step: state.step - 1 })
   const goToStep = (step: number) => dispatch({ type: 'SET_STEP', step })
+  const reset = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STORAGE_KEY)
+      if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
+    }
+    dispatch({ type: 'RESET' })
+  }
 
   const canProceed = () => {
     switch (state.step) {
@@ -121,7 +171,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WizardContext.Provider value={{ state, dispatch, nextStep, prevStep, goToStep, canProceed }}>
+    <WizardContext.Provider value={{ state, dispatch, nextStep, prevStep, goToStep, canProceed, reset }}>
       {children}
     </WizardContext.Provider>
   )

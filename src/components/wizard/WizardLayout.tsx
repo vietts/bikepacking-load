@@ -30,9 +30,10 @@ function StepContent({ step }: { step: number }) {
 }
 
 export function WizardLayout() {
-  const { state, nextStep, prevStep, goToStep, canProceed } = useWizard()
+  const { state, nextStep, prevStep, goToStep, canProceed, reset } = useWizard()
   const contentRef = useRef<HTMLDivElement>(null)
   const prevStepRef = useRef(state.step)
+  const hasProgress = !!state.bike || !!state.event || state.bags.length > 0 || state.selectedItems.length > 0
 
   // Animate step transitions
   useEffect(() => {
@@ -54,7 +55,20 @@ export function WizardLayout() {
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="heading-md text-base-content">Bike Load Simulator</h1>
-            <p className="text-xs text-base-content/40 mt-0.5">by Bike Adventure Series</p>
+            <p className="text-xs text-base-content/40 mt-0.5">
+              by Bike Adventure Series
+              {hasProgress && (
+                <>
+                  {' · '}
+                  <button
+                    onClick={() => { if (window.confirm('Start fresh? This clears your current setup.')) reset() }}
+                    className="link link-hover text-xs"
+                  >
+                    Start over
+                  </button>
+                </>
+              )}
+            </p>
           </div>
 
           {/* Timeline breadcrumb */}

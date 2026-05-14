@@ -3,6 +3,7 @@ import { useWizard } from '../../hooks/useWizard'
 import bikesData from '../../data/bikes.json'
 import type { BikeSpec, BikeSize } from '../../types'
 import { bikeIcons } from '../../assets/bikes/BikeIcons'
+import { QuickStart } from './QuickStart'
 import gsap from 'gsap'
 
 const bikes = bikesData as BikeSpec[]
@@ -61,8 +62,16 @@ export function Step1Bike() {
         <p className="label-caps text-primary mb-2">Step 1</p>
         <h2 className="heading-xl text-base-content">What's your ride?</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
-          Pick your bike type and size. This helps us figure out how much space you have for bags.
+          Pick your bike type and size — or jump-start from a template below. Don't overthink it, you can change anything later.
         </p>
+      </div>
+
+      <QuickStart />
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-base-300" />
+        <span className="label-caps text-base-content/40">or build your own</span>
+        <div className="flex-1 h-px bg-base-300" />
       </div>
 
       <div ref={cardsRef} className="grid grid-cols-2 sm:grid-cols-3 gap-4">

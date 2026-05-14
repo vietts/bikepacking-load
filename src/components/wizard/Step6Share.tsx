@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import { getShareUrl } from '../../utils/url-state'
+import { BikeViewer } from './BikeViewer'
 
 export function Step6Share() {
   const { state } = useWizard()
@@ -40,6 +41,13 @@ export function Step6Share() {
             {state.bags.length} bags · {state.selectedItems.length} items
           </div>
         </div>
+
+        <BikeViewer
+          bike={state.bike}
+          bags={state.bags}
+          bagStats={packing.bagStats}
+          distribution={packing.distribution}
+        />
 
         <div className="divider my-1" />
 
@@ -104,19 +112,68 @@ export function Step6Share() {
           Print packing list
         </button>
 
-        {/* CTA */}
-        <div className="card bg-gradient-to-br from-primary/10 to-accent/5 border-2 border-primary/15 p-8 text-center space-y-4">
-          <div className="heading-lg">Ready to ride?</div>
-          <p className="text-body text-base-content/60 max-w-md mx-auto">
-            Join thousands of bikepackers at the next Bike Adventure Series event.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <a href="https://bikeadventureseries.com" target="_blank" rel="noopener noreferrer"
-              className="btn btn-primary">Explore events</a>
-            <a href="https://bikeadventureseries.com/newsletter" target="_blank" rel="noopener noreferrer"
-              className="btn btn-ghost border border-primary/20">Get the newsletter</a>
-          </div>
+        {/* CTA — contextual to chosen event */}
+        <EventCTA />
+      </div>
+    </div>
+  )
+}
+
+const BAS_EVENT_URLS: Record<string, string> = {
+  tge: 'https://bikeadventureseries.com/the-grand-escape',
+  tt: 'https://bikeadventureseries.com/tuscany-trail',
+  nc4000: 'https://bikeadventureseries.com/northcape4000',
+  ffp: 'https://bikeadventureseries.com/final-frontier-patagonia',
+  unpaved: 'https://bikeadventureseries.com/unpaved-roads',
+}
+
+function EventCTA() {
+  const { state } = useWizard()
+  const event = state.event
+  const isBAS = event?.isBAS === true
+  const eventUrl = event && BAS_EVENT_URLS[event.id]
+
+  if (isBAS && event && eventUrl) {
+    const tip = event.tips?.[0]
+    return (
+      <div className="card bg-gradient-to-br from-primary/12 to-accent/6 border-2 border-primary/20 p-8 text-center space-y-4">
+        <div>
+          <p className="label-caps text-accent">You're ready for</p>
+          <div className="heading-lg mt-1">{event.name}</div>
         </div>
+        {tip && (
+          <p className="text-body text-base-content/65 max-w-md mx-auto italic">
+            “{tip}”
+          </p>
+        )}
+        <p className="text-body text-base-content/60 max-w-md mx-auto">
+          Your setup matches what works for this ride. The hardest part is done — now grab a spot.
+        </p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <a href={eventUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+            Sign up for {event.name}
+          </a>
+          <a href="https://bikeadventureseries.com/newsletter" target="_blank" rel="noopener noreferrer"
+            className="btn btn-ghost border border-primary/20">
+            Get the newsletter
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Non-BAS event or no event selected
+  return (
+    <div className="card bg-gradient-to-br from-primary/10 to-accent/5 border-2 border-primary/15 p-8 text-center space-y-4">
+      <div className="heading-lg">Ready for the real thing?</div>
+      <p className="text-body text-base-content/60 max-w-md mx-auto">
+        Your setup is sorted. Now find a ride that matches it — BAS runs no-race bikepacking events all over Europe and Patagonia for riders just like you.
+      </p>
+      <div className="flex flex-wrap gap-3 justify-center">
+        <a href="https://bikeadventureseries.com" target="_blank" rel="noopener noreferrer"
+          className="btn btn-primary">Explore events</a>
+        <a href="https://bikeadventureseries.com/newsletter" target="_blank" rel="noopener noreferrer"
+          className="btn btn-ghost border border-primary/20">Get the newsletter</a>
       </div>
     </div>
   )

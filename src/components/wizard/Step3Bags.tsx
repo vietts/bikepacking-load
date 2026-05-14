@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
+import { usePacking } from '../../hooks/usePacking'
 import bagsData from '../../data/bags-bike24.json'
 import type { BagPreset, BagType, Bag } from '../../types'
 import { bagIcons } from '../../assets/icons/BagIcons'
+import { BikeViewer } from './BikeViewer'
 import gsap from 'gsap'
 
 const bagPresets = bagsData as BagPreset[]
@@ -18,6 +20,7 @@ const bagTypes: { type: BagType; label: string; description: string }[] = [
 
 export function Step3Bags() {
   const { state, dispatch } = useWizard()
+  const packing = usePacking(state)
   const [expandedType, setExpandedType] = useState<BagType | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -70,12 +73,13 @@ export function Step3Bags() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-10 space-y-8 lg:space-y-0">
+      <div className="space-y-8 min-w-0 lg:order-1">
       <div>
         <p className="label-caps text-primary mb-2">Step 3</p>
         <h2 className="heading-xl text-base-content">Pick your bags</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
-          Select the bags you'll be using. Tap a category, then pick a bag.
+          Add the bags one by one — you'll see them appear on your bike on the right. Tap a category to choose a specific bag, or add a custom one.
         </p>
       </div>
 
@@ -190,6 +194,21 @@ export function Step3Bags() {
           </p>
         </div>
       )}
+      </div>
+
+      {/* Live bike viewer */}
+      <aside className="lg:order-2 lg:sticky lg:top-24 lg:self-start space-y-3">
+        <BikeViewer
+          bike={state.bike}
+          bags={state.bags}
+          bagStats={packing.bagStats}
+          distribution={packing.distribution}
+          onBagSelect={(type) => setExpandedType(type)}
+          caption={state.bags.length === 0
+            ? "Pick a bag — it'll appear on your bike here."
+            : `${state.bags.length} bag${state.bags.length > 1 ? 's' : ''} on the bike · tap a slot to switch`}
+        />
+      </aside>
     </div>
   )
 }

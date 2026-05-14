@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import { validate } from '../../utils/validation'
+import { BikeViewer } from './BikeViewer'
 import gsap from 'gsap'
 
 const severityStyle: Record<string, { bg: string; border: string; text: string; icon: string }> = {
@@ -60,6 +61,19 @@ export function Step5Results() {
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
           Here's the summary of your setup{state.event ? ` for ${state.event.name}` : ''}.
         </p>
+      </div>
+
+      {/* Bike viewer hero */}
+      <div className="max-w-2xl mx-auto">
+        <BikeViewer
+          bike={state.bike}
+          bags={state.bags}
+          bagStats={packing.bagStats}
+          distribution={packing.distribution}
+          caption={state.event
+            ? `${state.bike?.type} · ${state.event.name} · ${packing.totalWeightKg.toFixed(1)}kg`
+            : `${state.bike?.type} · ${packing.totalWeightKg.toFixed(1)}kg`}
+        />
       </div>
 
       {/* Weight hero */}

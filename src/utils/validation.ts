@@ -16,14 +16,14 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
   if (totalWeightKg > state.event.maxAcceptableWeight) {
     messages.push({
       severity: 'error',
-      title: 'Too much weight',
-      message: `Your total load is ${totalWeightKg.toFixed(1)}kg — for ${state.event.name} we recommend staying under ${state.event.maxAcceptableWeight}kg. Less is more on the road!`,
+      title: 'A bit too much',
+      message: `${totalWeightKg.toFixed(1)}kg is over what we'd carry on ${state.event.name}. Look for things you can leave behind — the weight you don't bring is the weight you don't feel.`,
     })
   } else if (totalWeightKg > state.event.recommendedWeight.max) {
     messages.push({
       severity: 'warning',
-      title: 'Above target weight',
-      message: `Your load is ${totalWeightKg.toFixed(1)}kg — the sweet spot for ${state.event.name} is ${state.event.recommendedWeight.min}-${state.event.recommendedWeight.max}kg. You might want to trim a few things.`,
+      title: 'A little heavy',
+      message: `You're at ${totalWeightKg.toFixed(1)}kg. For ${state.event.name}, riders are usually happiest between ${state.event.recommendedWeight.min} and ${state.event.recommendedWeight.max}kg. Want to trim a few extras?`,
     })
   }
 
@@ -38,8 +38,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
     if (bag.type === 'handlebar' && bagWeightKg > 5) {
       messages.push({
         severity: 'warning',
-        title: 'Heavy handlebar bag',
-        message: `Your handlebar bag is ${bagWeightKg.toFixed(1)}kg — above 4-5kg your steering gets sketchy. Try moving heavy items to the frame bag.`,
+        title: 'Handlebar feels heavy',
+        message: `${bagWeightKg.toFixed(1)}kg up front is a lot — over 4-5kg the steering gets twitchy on descents. Move anything dense into the frame bag if you can.`,
         bagId: bag.id,
       })
     }
@@ -48,8 +48,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
     if (bag.type === 'saddle' && bagWeightKg > 5) {
       messages.push({
         severity: 'warning',
-        title: 'Heavy saddle bag',
-        message: `Your saddle bag is getting heavy (${bagWeightKg.toFixed(1)}kg). It'll start swaying side to side. Move heavier items to the frame.`,
+        title: 'Saddle bag is loaded up',
+        message: `${bagWeightKg.toFixed(1)}kg behind the saddle tends to sway side-to-side on rough sections. Shifting the heavier stuff to the frame keeps the bike planted.`,
         bagId: bag.id,
       })
     }
@@ -59,8 +59,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
     if (bag.volume > 0 && effectiveVol / bag.volume > 0.9) {
       messages.push({
         severity: 'warning',
-        title: `${bag.type.replace('_', ' ')} almost full`,
-        message: `Your items take up ${Math.round((effectiveVol / bag.volume) * 100)}% of the ${bag.type.replace('_', ' ')} space. Solid items don't pack like liquid — leave a bit of room for snacks and supplies you'll pick up along the way.`,
+        title: `${bag.type.replace('_', ' ')} is almost full`,
+        message: `You're using about ${Math.round((effectiveVol / bag.volume) * 100)}% of the space. Leave a bit of room — you'll pick up snacks and small things along the way.`,
         bagId: bag.id,
       })
     }
@@ -83,8 +83,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
     if (rearPercent > 60) {
       messages.push({
         severity: 'warning',
-        title: 'Rear-heavy load',
-        message: `Your load is ${Math.round(rearPercent)}% rear-heavy. This makes the front wheel lighter and less predictable. Spread some weight forward.`,
+        title: 'Most of the weight is at the back',
+        message: `About ${Math.round(rearPercent)}% of your load is over the rear wheel. It makes the front feel light and a little vague — try shifting a couple of heavier items forward into the frame.`,
       })
     }
   }
@@ -97,8 +97,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
       if (item) {
         messages.push({
           severity: 'error',
-          title: `Missing: ${item.name}`,
-          message: `Don't forget your ${item.name.toLowerCase()}! It's one of those things you won't miss until you really, really need it.`,
+          title: `You'll want: ${item.name}`,
+          message: `Don't forget your ${item.name.toLowerCase()} — it's one of those things you won't miss until the moment you really need it.`,
           itemId: essentialId,
         })
       }
@@ -112,8 +112,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
       if (item) {
         messages.push({
           severity: 'info',
-          title: `Consider leaving: ${item.name}`,
-          message: `You packed a ${item.name.toLowerCase()} — for ${state.event.name} you probably won't need it. But hey, it's your call!`,
+          title: `Maybe leave the ${item.name.toLowerCase()}?`,
+          message: `On ${state.event.name} you can probably do without it. Up to you — but every gram you skip is one you don't carry up the hills.`,
           itemId: selectedItem.itemId,
         })
       }
@@ -132,8 +132,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
       if (item && item.rigidity === 'rigid' && selectedItem.weight > 200 && bag.type === 'handlebar') {
         messages.push({
           severity: 'info',
-          title: `Better placement for ${item.name}`,
-          message: `Tip: your ${item.name.toLowerCase()} (${selectedItem.weight}g) would ride better in the frame bag — it keeps the weight low and centered.`,
+          title: `Move the ${item.name.toLowerCase()}?`,
+          message: `Heavy, solid items like this ride better in the frame bag — low and centered. The bike feels steadier, especially on descents.`,
           itemId: selectedItem.itemId,
           bagId: selectedItem.bagId,
         })
@@ -149,8 +149,8 @@ export function validate(state: WizardState, bagStats: Record<string, BagStats>)
     totalWeightKg <= state.event.recommendedWeight.max) {
     messages.push({
       severity: 'success',
-      title: 'Looking great!',
-      message: `${totalWeightKg.toFixed(1)}kg for ${state.event.name} is a solid setup. You've got everything you need and nothing you don't. 🤙`,
+      title: 'This is a solid setup',
+      message: `${totalWeightKg.toFixed(1)}kg for ${state.event.name} is exactly where you want to be — everything you need, nothing you don't. Have a great ride.`,
     })
   }
 

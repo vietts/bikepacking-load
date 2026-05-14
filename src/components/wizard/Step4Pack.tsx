@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import itemsData from '../../data/items.json'
-import type { ItemSpec, ItemCategory } from '../../types'
+import type { ItemSpec, ItemCategory, BagType } from '../../types'
+import { BikeViewer } from './BikeViewer'
 import gsap from 'gsap'
 
 const items = itemsData as ItemSpec[]
@@ -17,14 +18,55 @@ const categories: { id: ItemCategory; label: string }[] = [
   { id: 'docs', label: 'Docs' },
 ]
 
+const FALLBACK_BAG_ORDER: BagType[] = ['frame', 'saddle', 'handlebar', 'top_tube', 'fork', 'rear_rack']
+
 export function Step4Pack() {
   const { state, dispatch } = useWizard()
   const packing = usePacking(state)
   const [activeCategory, setActiveCategory] = useState<ItemCategory>('clothes')
+  const [highlightBagId, setHighlightBagId] = useState<string | null>(null)
   const itemsRef = useRef<HTMLDivElement>(null)
 
   const categoryItems = items.filter(i => i.category === activeCategory)
   const selectedItemIds = new Set(state.selectedItems.map(i => i.itemId))
+
+  function pickBagIdForType(preferred: BagType | undefined): string | null {
+    if (preferred) {
+      const match = state.bags.find(b => b.type === preferred)
+      if (match) return match.id
+    }
+    for (const t of FALLBACK_BAG_ORDER) {
+      const match = state.bags.find(b => b.type === t)
+      if (match) return match.id
+    }
+    return null
+  }
+
+  function smartPack() {
+    if (!state.event || state.bags.length === 0) return
+
+    // 1. Add essentials not already selected
+    for (const itemId of state.event.essentialItems) {
+      if (selectedItemIds.has(itemId)) continue
+      const item = items.find(i => i.id === itemId)
+      if (!item) continue
+      const avgWeight = Math.round((item.weight.min + item.weight.max) / 2)
+      const avgVolume = +((item.volume.min + item.volume.max) / 2).toFixed(2)
+      dispatch({ type: 'TOGGLE_ITEM', itemId, weight: avgWeight, volume: avgVolume })
+    }
+
+    // 2. Auto-assign any unassigned item (existing + newly added) to its preferredBag (or fallback)
+    const allToAssign = new Set<string>([
+      ...state.selectedItems.filter(i => i.bagId === null).map(i => i.itemId),
+      ...state.event.essentialItems.filter(id => !selectedItemIds.has(id)),
+    ])
+    for (const itemId of allToAssign) {
+      const item = items.find(i => i.id === itemId)
+      if (!item) continue
+      const bagId = pickBagIdForType(item.preferredBag)
+      if (bagId) dispatch({ type: 'ASSIGN_ITEM', itemId, bagId })
+    }
+  }
 
   // Animate items when category changes
   useEffect(() => {
@@ -46,25 +88,60 @@ export function Step4Pack() {
     const avgWeight = Math.round((item.weight.min + item.weight.max) / 2)
     const avgVolume = +((item.volume.min + item.volume.max) / 2).toFixed(2)
     dispatch({ type: 'TOGGLE_ITEM', itemId: item.id, weight: avgWeight, volume: avgVolume })
+
+    // If item is being added and has a preferred bag available, auto-assign
+    const isBeingAdded = !selectedItemIds.has(item.id)
+    if (isBeingAdded) {
+      const bagId = pickBagIdForType(item.preferredBag)
+      if (bagId) {
+        dispatch({ type: 'ASSIGN_ITEM', itemId: item.id, bagId })
+        setHighlightBagId(bagId)
+        window.setTimeout(() => setHighlightBagId(null), 1400)
+      }
+    }
   }
 
   function assignToBag(itemId: string, bagId: string | null) {
     dispatch({ type: 'ASSIGN_ITEM', itemId, bagId })
+    if (bagId) {
+      setHighlightBagId(bagId)
+      window.setTimeout(() => setHighlightBagId(null), 1400)
+    }
   }
+
+  const unassignedCount = state.selectedItems.filter(i => i.bagId === null).length
+  const missingEssentials = state.event
+    ? state.event.essentialItems.filter(id => !selectedItemIds.has(id)).length
+    : 0
+  const canSmartPack = state.bags.length > 0 && (missingEssentials > 0 || unassignedCount > 0)
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="label-caps text-primary mb-2">Step 4</p>
-        <h2 className="heading-xl text-base-content">Pack your gear</h2>
-        <p className="text-body text-base-content/60 mt-3 max-w-lg">
-          Select items and assign them to your bags. Essential items are pre-marked.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="label-caps text-primary mb-2">Step 4</p>
+          <h2 className="heading-xl text-base-content">Pack your gear</h2>
+          <p className="text-body text-base-content/60 mt-3 max-w-lg">
+            Tick what you're bringing — we'll drop each item into the right bag automatically. Watch the bike on the right fill up.
+          </p>
+        </div>
+
+        {canSmartPack && (
+          <button
+            onClick={smartPack}
+            className="btn btn-accent btn-sm gap-2 self-start sm:self-auto"
+            title={missingEssentials > 0
+              ? `Add ${missingEssentials} missing essential${missingEssentials > 1 ? 's' : ''} and arrange everything`
+              : 'Auto-assign unpacked items to the right bags'}
+          >
+            ✨ Pack for me
+          </button>
+        )}
       </div>
 
-      <div className="lg:flex lg:gap-8">
+      <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-10 space-y-6 lg:space-y-0">
         {/* Left: Gear list */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4 lg:order-1">
           {/* Category tabs */}
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
             {categories.map(cat => {
@@ -130,8 +207,16 @@ export function Step4Pack() {
           </div>
         </div>
 
-        {/* Right: Bag view */}
-        <div className="lg:w-80 mt-8 lg:mt-0 space-y-3">
+        {/* Right: Bike viewer + bag stats */}
+        <aside className="lg:order-2 lg:sticky lg:top-24 lg:self-start space-y-4">
+          <BikeViewer
+            bike={state.bike}
+            bags={state.bags}
+            bagStats={packing.bagStats}
+            distribution={packing.distribution}
+            highlightBagId={highlightBagId}
+          />
+
           <p className="label-caps text-base-content/40">Your bags</p>
 
           {state.bags.map(bag => {
@@ -181,8 +266,8 @@ export function Step4Pack() {
                   {stats.effectiveVolume !== stats.totalVolume && stats.totalVolume > 0 && (
                     <div className="text-[10px] text-base-content/25 mt-0.5">
                       {stats.effectiveVolume > stats.totalVolume
-                        ? `Rigid/cylindrical items take up more space than their size (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L)`
-                        : `Soft items compress to fill gaps (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L)`
+                        ? `Hard items leave gaps inside, so they take more room than their numbers say (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L).`
+                        : `Soft stuff squishes down nicely (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L).`
                       }
                     </div>
                   )}
@@ -191,15 +276,15 @@ export function Step4Pack() {
                 {isOverloaded && (
                   <div className="bg-error/10 rounded-lg px-3 py-2 text-small text-error">
                     {stats.overWeight && stats.overVolume
-                      ? `Too heavy and too full. Move ${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg and ${(stats.effectiveVolume - bag.volume).toFixed(1)}L worth of items to another bag.`
+                      ? `This one's overloaded — about ${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg and ${(stats.effectiveVolume - bag.volume).toFixed(1)}L too much. Move something into another bag.`
                       : stats.overWeight
-                        ? `${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg over the limit. Move heavy items to ${bag.type === 'handlebar' ? 'the frame bag' : 'another bag'}.`
-                        : `These items take up ${stats.effectiveVolume.toFixed(1)}L of space but the bag only fits ${bag.volume}L. Rigid and cylindrical items leave gaps — try swapping for softer gear or move something out.`}
+                        ? `${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg over what this bag was made for. Heavy stuff is happiest in the frame bag.`
+                        : `Won't all fit — you've packed about ${stats.effectiveVolume.toFixed(1)}L into a ${bag.volume}L bag. Try moving something out, or swap a hard item for a softer one.`}
                   </div>
                 )}
                 {isNearLimit && (
                   <div className="bg-warning/10 rounded-lg px-3 py-2 text-small text-warning">
-                    Getting full — leave room for snacks along the way.
+                    Almost full. Leave a little room for snacks and the things you'll pick up along the way.
                   </div>
                 )}
 
@@ -224,7 +309,7 @@ export function Step4Pack() {
               <span className="font-normal text-small"> / {state.event.recommendedWeight.min}–{state.event.recommendedWeight.max} kg target</span>
             )}
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   )
