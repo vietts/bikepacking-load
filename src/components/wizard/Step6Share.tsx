@@ -43,7 +43,7 @@ export function Step6Share() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="print:hidden">
         <p className="label-caps text-primary mb-2">Step 6</p>
         <h2 className="heading-xl text-base-content">Share your setup</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
@@ -56,8 +56,8 @@ export function Step6Share() {
         {/* Print-only document header */}
         <div className="hidden print:block border-b-2 border-base-content pb-2 mb-2">
           <h1 className="text-2xl font-bold">Packing list</h1>
-          <p className="text-sm capitalize">
-            {state.bike?.type} {state.bike?.size}{state.event && ` · ${state.event.name}`} · {packing.totalWeightKg.toFixed(1)} kg total
+          <p className="text-sm">
+            <span className="capitalize">{state.bike?.type}</span> {state.bike?.size}{state.event && ` · ${state.event.name}`} · {packing.totalWeightKg.toFixed(1)} kg total
           </p>
         </div>
 
