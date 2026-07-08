@@ -223,3 +223,23 @@ body {
 /* No scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ========================================
+   PRINT — clean packing checklist
+   ======================================== */
+@media print {
+  /* Drop decorative textures and page chrome so the checklist stands alone */
+  .bg-topo { background-image: none !important; }
+  .grain::after { display: none !important; }
+  body { background: #fff !important; }
+
+  /* Keep each bag's list from splitting across pages */
+  .break-inside-avoid { break-inside: avoid; }
+
+  /* Tick boxes must render as visible outlines, not filled shapes */
+  .print-checkbox {
+    border: 1.5px solid #444 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

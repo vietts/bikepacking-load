@@ -73,7 +73,7 @@ export function WizardLayout() {
   return (
     <div className="min-h-screen bg-base-200 bg-topo grain">
       {/* Header */}
-      <header className="bg-base-100/80 backdrop-blur-sm border-b border-base-300 sticky top-0 z-20">
+      <header className="bg-base-100/80 backdrop-blur-sm border-b border-base-300 sticky top-0 z-20 print:hidden">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="heading-md text-base-content">Bike Load Simulator</h1>
@@ -148,7 +148,7 @@ export function WizardLayout() {
 
       {/* Restored-session notice */}
       {restoredFrom === 'storage' && (
-        <div className="bg-primary/10 border-b border-primary/20">
+        <div className="bg-primary/10 border-b border-primary/20 print:hidden">
           <div className="max-w-5xl mx-auto px-6 py-2.5 flex items-center justify-between gap-3 text-sm">
             <span className="text-base-content/80">We picked up where you left off.</span>
             <div className="flex items-center gap-3 shrink-0">
@@ -166,7 +166,7 @@ export function WizardLayout() {
         </div>
 
         {/* Navigation — integrated into content flow */}
-        <div className="mt-12 flex justify-between items-center">
+        <div className="mt-12 flex justify-between items-center print:hidden">
           <button
             onClick={prevStep}
             disabled={state.step === 1}
