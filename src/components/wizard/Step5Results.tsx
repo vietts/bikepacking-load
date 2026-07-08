@@ -2,13 +2,14 @@ import { useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import { validate } from '../../utils/validation'
+import { prefersReducedMotion } from '../../utils/motion'
 import gsap from 'gsap'
 
-const severityStyle: Record<string, { bg: string; border: string; text: string; icon: string }> = {
-  error:   { bg: 'bg-error/8',   border: 'border-error/20',   text: 'text-error',   icon: '🔴' },
-  warning: { bg: 'bg-warning/8', border: 'border-warning/20', text: 'text-warning', icon: '⚠️' },
-  info:    { bg: 'bg-info/8',    border: 'border-info/20',    text: 'text-info',    icon: '💡' },
-  success: { bg: 'bg-success/8', border: 'border-success/20', text: 'text-success', icon: '✅' },
+const severityStyle: Record<string, { bg: string; border: string; text: string; icon: string; label: string }> = {
+  error:   { bg: 'bg-error/8',   border: 'border-error/20',   text: 'text-error',   icon: '🔴', label: 'Needs fixing' },
+  warning: { bg: 'bg-warning/8', border: 'border-warning/20', text: 'text-warning', icon: '⚠️', label: 'Heads up' },
+  info:    { bg: 'bg-info/8',    border: 'border-info/20',    text: 'text-info',    icon: '💡', label: 'Tip' },
+  success: { bg: 'bg-success/8', border: 'border-success/20', text: 'text-success', icon: '✅', label: 'All good' },
 }
 
 export function Step5Results() {
@@ -19,14 +20,19 @@ export function Step5Results() {
   const barsRef = useRef<HTMLDivElement>(null)
   const msgsRef = useRef<HTMLDivElement>(null)
 
-  // Count-up weight animation
+  // Count-up weight animation (skipped for reduced-motion — show the number now)
   useEffect(() => {
     if (!weightRef.current) return
+    const finalValue = packing.totalWeightKg.toFixed(1)
+    if (prefersReducedMotion()) {
+      weightRef.current.textContent = finalValue
+      return
+    }
     gsap.fromTo(weightRef.current,
       { innerText: '0.0' },
       {
-        innerText: packing.totalWeightKg.toFixed(1),
-        duration: 1.2,
+        innerText: finalValue,
+        duration: 0.6,
         ease: 'power2.out',
         snap: { innerText: 0.1 },
         onUpdate() {
@@ -38,12 +44,16 @@ export function Step5Results() {
     )
   }, [packing.totalWeightKg])
 
-  // Stagger messages
+  // Stagger messages (skipped for reduced-motion)
   useEffect(() => {
     if (!msgsRef.current) return
+    if (prefersReducedMotion()) {
+      gsap.set(msgsRef.current.children, { opacity: 1, y: 0 })
+      return
+    }
     gsap.fromTo(msgsRef.current.children,
       { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out', delay: 0.3 }
+      { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power3.out', delay: 0.15 }
     )
   }, [messages.length])
 
@@ -68,8 +78,8 @@ export function Step5Results() {
           <span ref={weightRef} className="text-6xl font-bold font-[var(--font-heading)] tracking-tight">
             {packing.totalWeightKg.toFixed(1)}
           </span>
-          <span className="text-2xl text-base-content/40 ml-1">kg</span>
-          <div className="text-body text-base-content/45 mt-1">total gear weight</div>
+          <span className="text-2xl text-base-content/60 ml-1">kg</span>
+          <div className="text-body text-base-content/60 mt-1">total gear weight</div>
           {state.event && (
             <div className={`text-body font-semibold mt-2 ${
               packing.isOverMaxWeight ? 'text-error' : packing.isInRecommendedRange ? 'text-success' : 'text-warning'
@@ -102,7 +112,7 @@ export function Step5Results() {
 
       {/* Per-bag breakdown */}
       <div ref={barsRef} className="card card-border bg-base-100 p-6 space-y-4">
-        <p className="label-caps text-base-content/40">Per-bag breakdown</p>
+        <p className="label-caps text-base-content/60">Per-bag breakdown</p>
         {state.bags.map(bag => {
           const stats = packing.bagStats[bag.id]
           if (!stats) return null
@@ -110,8 +120,8 @@ export function Step5Results() {
           return (
             <div key={bag.id} className="space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span className="font-semibold">{bag.type.replace('_', ' ')}{bag.brand && <span className="text-base-content/35 font-normal"> · {bag.brand}</span>}</span>
-                <span className="text-base-content/45">
+                <span className="font-semibold">{bag.type.replace('_', ' ')}{bag.brand && <span className="text-base-content/60 font-normal"> · {bag.brand}</span>}</span>
+                <span className="text-base-content/60">
                   {(stats.totalWeight / 1000).toFixed(1)}kg · {stats.effectiveVolume.toFixed(1)}L used
                 </span>
               </div>
@@ -131,12 +141,12 @@ export function Step5Results() {
 
       {/* Weight distribution */}
       <div className="card card-border bg-base-100 p-6 space-y-4">
-        <p className="label-caps text-base-content/40">Weight distribution</p>
+        <p className="label-caps text-base-content/60">Weight distribution</p>
         <div className="flex gap-6">
           {(['front', 'center', 'rear'] as const).map(zone => (
             <div key={zone} className="flex-1 text-center">
               <div className="text-3xl font-bold font-[var(--font-heading)]">{Math.round(packing.distribution[zone])}%</div>
-              <div className="text-small text-base-content/40 capitalize mt-0.5">{zone}</div>
+              <div className="text-small text-base-content/60 capitalize mt-0.5">{zone}</div>
             </div>
           ))}
         </div>
@@ -150,14 +160,18 @@ export function Step5Results() {
       {/* Feedback */}
       {messages.length > 0 && (
         <div className="space-y-4">
-          <p className="label-caps text-base-content/40">Feedback</p>
+          <p className="label-caps text-base-content/60">Feedback</p>
           <div ref={msgsRef} className="space-y-3">
             {[...successes, ...errors, ...warnings, ...infos].map((msg, i) => {
               const s = severityStyle[msg.severity]
               return (
                 <div key={i} className={`${s.bg} border ${s.border} rounded-xl p-4`}>
-                  <div className={`font-semibold text-sm ${s.text}`}>{s.icon} {msg.title}</div>
-                  <div className={`text-body ${s.text} opacity-75 mt-0.5`}>{msg.message}</div>
+                  <div className={`flex items-center gap-2 font-semibold text-sm ${s.text}`}>
+                    <span aria-hidden="true">{s.icon}</span>
+                    <span className="label-caps text-[10px] opacity-80">{s.label}</span>
+                    <span>· {msg.title}</span>
+                  </div>
+                  <div className={`text-body ${s.text} opacity-90 mt-0.5`}>{msg.message}</div>
                 </div>
               )
             })}

@@ -85,6 +85,7 @@ export interface SelectedItem {
   bagId: string | null // null = selected but not assigned to a bag
   weight: number // grams, user-chosen value within range
   volume: number // liters, user-chosen value within range
+  auto?: boolean // true = pre-selected because it's essential for the chosen event (not a manual pick)
 }
 
 export interface WizardState {

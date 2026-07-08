@@ -23,20 +23,20 @@ export function Step6Share() {
         <p className="label-caps text-primary mb-2">Step 6</p>
         <h2 className="heading-xl text-base-content">Share your setup</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
-          Show this to your riding buddies!
+          Copy the link below and send it to your riding buddies — it opens this exact setup. Your setup is also saved on this device, so you can come back anytime.
         </p>
       </div>
 
       {/* Summary card */}
       <div className="card card-border bg-base-100 p-6 space-y-4 print:border-0">
         <div className="text-center">
-          <div className="text-small text-base-content/40">
+          <div className="text-small text-base-content/60">
             {state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
           </div>
           <div className="text-5xl font-bold font-[var(--font-heading)] tracking-tight mt-1">
             {packing.totalWeightKg.toFixed(1)} kg
           </div>
-          <div className="text-small text-base-content/40 mt-1">
+          <div className="text-small text-base-content/60 mt-1">
             {state.bags.length} bags · {state.selectedItems.length} items
           </div>
         </div>
@@ -49,7 +49,7 @@ export function Step6Share() {
             if (assignedItems.length === 0) return null
             return (
               <div key={bag.id}>
-                <p className="label-caps text-base-content/40 mb-1">
+                <p className="label-caps text-base-content/60 mb-1">
                   {bag.type.replace('_', ' ')} {bag.brand && `(${bag.brand})`}
                 </p>
                 <ul className="space-y-0.5">
@@ -58,7 +58,7 @@ export function Step6Share() {
                     return (
                       <li key={si.itemId} className="text-body flex justify-between">
                         <span>{spec?.name ?? si.itemId}</span>
-                        <span className="text-base-content/30">{si.weight}g</span>
+                        <span className="text-base-content/60">{si.weight}g</span>
                       </li>
                     )
                   })}
@@ -72,14 +72,14 @@ export function Step6Share() {
             if (unassigned.length === 0) return null
             return (
               <div>
-                <p className="label-caps text-base-content/40 mb-1">Not assigned</p>
+                <p className="label-caps text-base-content/60 mb-1">Not assigned</p>
                 <ul className="space-y-0.5">
                   {unassigned.map(si => {
                     const spec = getItemSpec(si.itemId)
                     return (
                       <li key={si.itemId} className="text-body flex justify-between">
                         <span>{spec?.name ?? si.itemId}</span>
-                        <span className="text-base-content/30">{si.weight}g</span>
+                        <span className="text-base-content/60">{si.weight}g</span>
                       </li>
                     )
                   })}
@@ -94,7 +94,7 @@ export function Step6Share() {
       <div className="space-y-3 print:hidden">
         <div className="join w-full">
           <input type="text" readOnly value={shareUrl}
-            className="input input-bordered join-item flex-1 text-small text-base-content/40 truncate" />
+            className="input input-bordered join-item flex-1 text-small text-base-content/60 truncate" />
           <button onClick={copyUrl} className="btn btn-primary join-item">
             {copied ? '✓ Copied!' : 'Copy link'}
           </button>

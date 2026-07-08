@@ -57,16 +57,20 @@ export function Step4Pack() {
       <div>
         <p className="label-caps text-primary mb-2">Step 4</p>
         <h2 className="heading-xl text-base-content">Pack your gear</h2>
-        <p className="text-body text-base-content/60 mt-3 max-w-lg">
-          Select items and assign them to your bags. Essential items are pre-marked.
+        <p className="text-body text-base-content/70 mt-3 max-w-lg">
+          {state.event ? (
+            <>We've pre-packed the essentials for <span className="font-semibold text-base-content">{state.event.name}</span> — add or remove anything you like, then assign items to your bags.</>
+          ) : (
+            <>Select items and assign them to your bags.</>
+          )}
         </p>
       </div>
 
       <div className="lg:flex lg:gap-8">
         {/* Left: Gear list */}
         <div className="flex-1 space-y-4">
-          {/* Category tabs */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {/* Category tabs — wrap so no category is ever hidden off-screen */}
+          <div className="flex flex-wrap gap-1.5 pb-1">
             {categories.map(cat => {
               const count = items.filter(i => i.category === cat.id && selectedItemIds.has(i.id)).length
               return (
@@ -95,28 +99,31 @@ export function Step4Pack() {
                       : unnecessary ? 'border-warning/20 bg-warning/3' : 'bg-base-100'
                   }`}>
                   <div className="flex items-start gap-3">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleItem(item)}
-                      className="checkbox checkbox-sm checkbox-primary mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{item.name}</span>
-                        {essential && <span className="badge badge-success badge-xs">ESSENTIAL</span>}
-                        {item.priority === 'conditional' && <span className="badge badge-warning badge-xs">CONDITIONAL</span>}
-                      </div>
-                      <div className="text-small text-base-content/35 mt-0.5">
-                        {item.weight.min === item.weight.max ? `${item.weight.min}g` : `${item.weight.min}–${item.weight.max}g`}
-                        {item.volume.max > 0 && (<> · {item.volume.min === item.volume.max ? `${item.volume.min}L` : `${item.volume.min}–${item.volume.max}L`}</>)}
-                      </div>
-                      {item.note && <div className="text-small text-base-content/40 mt-0.5 italic">{item.note}</div>}
-                      {unnecessary && isSelected && (
-                        <div className="text-small text-warning font-medium mt-1">
-                          💡 For {state.event?.name} you probably won't need this.
+                    <label className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer py-1">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleItem(item)}
+                        className="checkbox checkbox-primary mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{item.name}</span>
+                          {essential && <span className="badge badge-success badge-xs">ESSENTIAL</span>}
+                          {item.priority === 'conditional' && <span className="badge badge-warning badge-xs">CONDITIONAL</span>}
                         </div>
-                      )}
-                    </div>
+                        <div className="text-small text-base-content/60 mt-0.5">
+                          {item.weight.min === item.weight.max ? `${item.weight.min}g` : `${item.weight.min}–${item.weight.max}g`}
+                          {item.volume.max > 0 && (<> · {item.volume.min === item.volume.max ? `${item.volume.min}L` : `${item.volume.min}–${item.volume.max}L`}</>)}
+                        </div>
+                        {item.note && <div className="text-small text-base-content/60 mt-0.5 italic">{item.note}</div>}
+                        {unnecessary && isSelected && (
+                          <div className="text-small text-warning font-medium mt-1">
+                            💡 For {state.event?.name} you probably won't need this.
+                          </div>
+                        )}
+                      </div>
+                    </label>
                     {isSelected && state.bags.length > 0 && (
                       <select value={selectedItem?.bagId ?? ''} onChange={e => assignToBag(item.id, e.target.value || null)}
-                        className="select select-xs select-bordered shrink-0">
+                        aria-label={`Assign ${item.name} to a bag`}
+                        className="select select-sm select-bordered shrink-0 self-center min-h-[44px]">
                         <option value="">Unassigned</option>
                         {state.bags.map(bag => (
                           <option key={bag.id} value={bag.id}>→ {bag.type.replace('_', ' ')}{bag.brand ? ` (${bag.brand})` : ''}</option>
@@ -132,7 +139,7 @@ export function Step4Pack() {
 
         {/* Right: Bag view */}
         <div className="lg:w-80 mt-8 lg:mt-0 space-y-3">
-          <p className="label-caps text-base-content/40">Your bags</p>
+          <p className="label-caps text-base-content/60">Your bags</p>
 
           {state.bags.map(bag => {
             const stats = packing.bagStats[bag.id]
@@ -148,19 +155,19 @@ export function Step4Pack() {
                 <div className="flex justify-between items-center">
                   <span className="heading-md text-sm">
                     {bag.type.replace('_', ' ')}
-                    {bag.brand && <span className="text-base-content/35 font-normal"> · {bag.brand}</span>}
+                    {bag.brand && <span className="text-base-content/60 font-normal"> · {bag.brand}</span>}
                   </span>
-                  <span className={`text-small ${isOverloaded ? 'text-error font-bold' : 'text-base-content/35'}`}>
+                  <span className={`text-small ${isOverloaded ? 'text-error font-bold' : 'text-base-content/60'}`}>
                     {(stats.totalWeight / 1000).toFixed(1)} / {bag.maxWeight}kg
                   </span>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-[10px] mb-1">
-                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
+                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/60'}>
                       Weight {stats.overWeight && '— over limit!'}
                     </span>
-                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
+                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/60'}>
                       {Math.round(stats.weightPercent)}%
                     </span>
                   </div>
@@ -169,17 +176,17 @@ export function Step4Pack() {
                 </div>
                 <div>
                   <div className="flex justify-between text-[10px] mb-1">
-                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
+                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/60'}>
                       Space used {stats.overVolume && "— won't fit!"}
                     </span>
-                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
+                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/60'}>
                       {stats.effectiveVolume.toFixed(1)}L / {bag.volume}L
                     </span>
                   </div>
                   <progress className={`progress w-full h-2 ${stats.overVolume ? 'progress-error' : stats.volumePercent > 90 ? 'progress-warning' : 'progress-info'}`}
                     value={Math.min(100, stats.volumePercent)} max="100" />
                   {stats.effectiveVolume !== stats.totalVolume && stats.totalVolume > 0 && (
-                    <div className="text-[10px] text-base-content/25 mt-0.5">
+                    <div className="text-[10px] text-base-content/55 mt-0.5">
                       {stats.effectiveVolume > stats.totalVolume
                         ? `Rigid/cylindrical items take up more space than their size (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L)`
                         : `Soft items compress to fill gaps (${stats.totalVolume.toFixed(1)}L → ${stats.effectiveVolume.toFixed(1)}L)`
@@ -205,7 +212,7 @@ export function Step4Pack() {
 
                 <div className="flex flex-wrap gap-1 min-h-[24px]">
                   {assignedItems.length === 0 ? (
-                    <span className="text-small text-base-content/20 italic">Empty</span>
+                    <span className="text-small text-base-content/50 italic">Empty</span>
                   ) : assignedItems.map(si => (
                     <span key={si.itemId} className="badge badge-sm badge-soft badge-primary">{getItemSpec(si.itemId)?.name ?? si.itemId}</span>
                   ))}
