@@ -123,6 +123,22 @@ export function Step6Share() {
             )
           })()}
         </div>
+
+        {/* Shopping notes — blank lines to fill in by hand before the trip */}
+        <div className="break-inside-avoid">
+          <div className="flex items-baseline justify-between border-b border-base-300 pb-1.5 mb-3">
+            <h3 className="heading-md text-sm">To buy</h3>
+            <span className="text-small text-base-content/60 shrink-0">gear still to pick up</span>
+          </div>
+          <div className="space-y-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0" />
+                <span className="flex-1 border-b border-base-content/30" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
