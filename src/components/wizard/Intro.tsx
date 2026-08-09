@@ -1,8 +1,13 @@
+import { useWizard } from '../../hooks/useWizard'
+import { ImportCsvDialog } from '../ImportCsvDialog'
+
 interface IntroProps {
   onStart: () => void
 }
 
 export function Intro({ onStart }: IntroProps) {
+  const { dispatch } = useWizard()
+
   return (
     <div className="min-h-screen bg-base-200 bg-topo grain flex items-center justify-center px-6 py-12">
       <div className="max-w-xl text-center space-y-6">
@@ -22,6 +27,21 @@ export function Intro({ onStart }: IntroProps) {
         <p className="text-small text-base-content/50">
           Free · No sign-up · Nothing to install
         </p>
+
+        {/* Riders who already keep a list shouldn't have to retype it. */}
+        <div className="pt-4 border-t border-base-300/70">
+          <p className="text-body text-base-content/60">
+            Already have your list on LighterPack?
+          </p>
+          <ImportCsvDialog
+            label="Import a CSV and see if it fits your bags"
+            className="btn btn-ghost btn-sm border border-base-300 mt-2"
+            onImport={payload => {
+              dispatch({ type: 'IMPORT_ITEMS', ...payload })
+              onStart()
+            }}
+          />
+        </div>
       </div>
     </div>
   )

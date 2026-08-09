@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking, getItemSpec } from '../../hooks/usePacking'
+import { usePacking } from '../../hooks/usePacking'
 import { getShareUrl } from '../../utils/url-state'
-import type { BagPosition, SelectedItem } from '../../types'
+import { toCSV, downloadCSV } from '../../utils/csv'
+import { formatItemWeight, formatLoad, formatVolume } from '../../utils/units'
+import type { BagPosition, SelectedItem, UnitSystem } from '../../types'
 
 // Order bags front-to-back so the printed list mirrors loading the bike.
 const flowRank: Record<BagPosition, number> = {
@@ -11,15 +13,18 @@ const flowRank: Record<BagPosition, number> = {
 
 // Bulkiest first: pack big soft items at the bottom, small dense ones on top.
 function byBulk(items: SelectedItem[]): SelectedItem[] {
-  return [...items].sort((a, b) => b.volume - a.volume)
+  return [...items].sort((a, b) => b.volume * b.qty - a.volume * a.qty)
 }
 
-function ChecklistRow({ name, grams }: { name: string; grams: number }) {
+function ChecklistRow({ name, qty, grams, unit }: { name: string; qty: number; grams: number; unit: UnitSystem }) {
   return (
     <li className="flex items-center gap-3">
       <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0" />
-      <span className="flex-1 text-body">{name}</span>
-      <span className="text-small text-base-content/60 tabular-nums shrink-0">{grams}g</span>
+      <span className="flex-1 text-body">
+        {name}
+        {qty > 1 && <span className="text-base-content/60"> ×{qty}</span>}
+      </span>
+      <span className="text-small text-base-content/60 tabular-nums shrink-0">{formatItemWeight(grams * qty, unit)}</span>
     </li>
   )
 }
@@ -33,12 +38,23 @@ export function Step6Share() {
   const bagsInFlowOrder = [...state.bags].sort(
     (a, b) => (flowRank[a.position] ?? 99) - (flowRank[b.position] ?? 99)
   )
+  const wornItems = byBulk(state.selectedItems.filter(i => i.worn))
+  const itemCount = state.selectedItems.reduce((sum, i) => sum + i.qty, 0)
 
   function copyUrl() {
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  function exportCsv() {
+    const slug = [state.bike?.type, state.event?.name ?? 'trip']
+      .filter(Boolean)
+      .join('-')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+    downloadCSV(`${slug}-packing-list.csv`, toCSV(state, packing.catalog))
   }
 
   return (
@@ -57,7 +73,7 @@ export function Step6Share() {
         <div className="hidden print:block border-b-2 border-base-content pb-2 mb-2">
           <h1 className="text-2xl font-bold">Packing list</h1>
           <p className="text-sm">
-            <span className="capitalize">{state.bike?.type}</span> {state.bike?.size}{state.event && ` · ${state.event.name}`} · {packing.totalWeightKg.toFixed(1)} kg total
+            <span className="capitalize">{state.bike?.type}</span> {state.bike?.size}{state.event && ` · ${state.event.name}`} · {formatLoad(packing.onBikeWeight, state.unit)} on the bike
           </p>
         </div>
 
@@ -67,10 +83,10 @@ export function Step6Share() {
             {state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
           </div>
           <div className="text-5xl font-bold font-[var(--font-heading)] tracking-tight mt-1">
-            {packing.totalWeightKg.toFixed(1)} kg
+            {formatLoad(packing.onBikeWeight, state.unit)}
           </div>
           <div className="text-small text-base-content/60 mt-1">
-            {state.bags.length} {state.bags.length === 1 ? 'bag' : 'bags'} · {state.selectedItems.length} items total
+            on the bike · {state.bags.length} {state.bags.length === 1 ? 'bag' : 'bags'} · {itemCount} items
           </div>
         </div>
 
@@ -91,12 +107,12 @@ export function Step6Share() {
                     {bag.brand && <span className="font-normal text-base-content/60"> · {bag.brand}</span>}
                   </h3>
                   <span className="text-small text-base-content/60 shrink-0">
-                    {stats ? (stats.totalWeight / 1000).toFixed(1) : '0.0'}kg · {bag.volume}L
+                    {formatLoad(stats?.totalWeight ?? 0, state.unit)} · {formatVolume(bag.volume, state.unit)}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
                   {assignedItems.map(si => (
-                    <ChecklistRow key={si.itemId} name={getItemSpec(si.itemId)?.name ?? si.itemId} grams={si.weight} />
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
                   ))}
                 </ul>
               </div>
@@ -104,24 +120,41 @@ export function Step6Share() {
           })}
 
           {(() => {
-            const unassigned = byBulk(state.selectedItems.filter(i => !i.bagId))
+            const unassigned = byBulk(state.selectedItems.filter(i => !i.bagId && !i.worn))
             if (unassigned.length === 0) return null
             return (
               <div className="break-inside-avoid">
                 <div className="flex justify-between items-baseline border-b border-base-300 pb-1.5 mb-2.5">
                   <h3 className="heading-md text-sm">Not assigned yet</h3>
                   <span className="text-small text-base-content/60 shrink-0">
-                    {(packing.unassignedWeight / 1000).toFixed(1)}kg
+                    {formatLoad(packing.unassignedWeight, state.unit)}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
                   {unassigned.map(si => (
-                    <ChecklistRow key={si.itemId} name={getItemSpec(si.itemId)?.name ?? si.itemId} grams={si.weight} />
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
                   ))}
                 </ul>
               </div>
             )
           })()}
+
+          {/* Worn gear gets its own block: it goes on you at the door, not into a bag. */}
+          {wornItems.length > 0 && (
+            <div className="break-inside-avoid">
+              <div className="flex justify-between items-baseline border-b border-base-300 pb-1.5 mb-2.5">
+                <h3 className="heading-md text-sm">Wearing it</h3>
+                <span className="text-small text-base-content/60 shrink-0">
+                  {formatLoad(packing.wornWeight, state.unit)} · not on the bike
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {wornItems.map(si => (
+                  <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Shopping notes — blank lines to fill in by hand before the trip */}
@@ -151,9 +184,17 @@ export function Step6Share() {
           </button>
         </div>
 
-        <button onClick={() => window.print()} className="btn btn-block border border-base-300">
-          🖨 Print / save as PDF checklist
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={() => window.print()} className="btn flex-1 border border-base-300">
+            🖨 Print / save as PDF checklist
+          </button>
+          <button onClick={exportCsv} className="btn flex-1 border border-base-300">
+            ⭳ Download as CSV
+          </button>
+        </div>
+        <p className="text-small text-base-content/50 text-center">
+          The CSV opens in any spreadsheet — and LighterPack reads it too.
+        </p>
 
         {/* CTA */}
         <div className="card bg-gradient-to-br from-primary/10 to-accent/5 border-2 border-primary/15 p-8 text-center space-y-4">

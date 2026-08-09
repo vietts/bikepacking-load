@@ -1,32 +1,6 @@
 import { useMemo } from 'react'
-import type { WizardState, BagPosition } from '../types'
-import itemsData from '../data/items.json'
-import type { ItemSpec } from '../types'
-
-const items = itemsData as ItemSpec[]
-
-/**
- * Packing efficiency factors based on shape + rigidity.
- * Represents the real-world volume an item occupies inside a bag
- * relative to its nominal volume.
- *
- * - Rigid rectangular (1.0): stacks perfectly, no wasted space
- * - Rigid cylindrical (1.3): cylinders leave 30% gaps between them
- * - Soft rectangular (0.85): compresses slightly, fills small gaps
- * - Soft cylindrical (0.75): rolls/deforms to fill gaps efficiently
- */
-const PACKING_FACTOR: Record<string, Record<string, number>> = {
-  rigid:  { rectangular: 1.0,  cylindrical: 1.3 },
-  soft:   { rectangular: 0.85, cylindrical: 0.75 },
-}
-
-function getEffectiveVolume(itemId: string, nominalVolume: number): { effective: number; factor: number } {
-  const spec = items.find(i => i.id === itemId)
-  if (!spec) return { effective: nominalVolume, factor: 1.0 }
-
-  const factor = PACKING_FACTOR[spec.rigidity]?.[spec.shape] ?? 1.0
-  return { effective: +(nominalVolume * factor).toFixed(3), factor }
-}
+import type { WizardState, BagPosition, ItemCategory } from '../types'
+import { buildCatalog, packingFactorFor, type Catalog } from '../utils/catalog'
 
 export interface BagStats {
   totalWeight: number       // grams
@@ -38,15 +12,27 @@ export interface BagStats {
   overVolume: boolean       // based on effective volume
 }
 
-interface PackingStats {
+export interface PackingStats {
+  /** Everything you own for this trip, worn included. */
   totalWeight: number // grams
   totalWeightKg: number
+  /** What you're wearing — it never touches the bike. */
+  wornWeight: number
+  /** total − worn. This is what the bike actually carries, and what event limits apply to. */
+  onBikeWeight: number
+  onBikeWeightKg: number
+  /** Food, water, gas — on the bike now, gone by tonight. */
+  consumableWeight: number
+  /** onBike − consumable. The load you carry every single day. */
+  baseWeight: number
   bagStats: Record<string, BagStats>
-  unassignedWeight: number // grams
+  unassignedWeight: number // grams, on-bike gear with no bag yet
   unassignedVolume: number
   distribution: { front: number; center: number; rear: number }
+  categoryWeights: Record<ItemCategory, number> // grams, on-bike only
   isOverMaxWeight: boolean
   isInRecommendedRange: boolean
+  catalog: Catalog
 }
 
 const positionZone: Record<BagPosition, 'front' | 'center' | 'rear'> = {
@@ -57,88 +43,116 @@ const positionZone: Record<BagPosition, 'front' | 'center' | 'rear'> = {
   rear_mid: 'rear',
 }
 
+const emptyCategoryWeights = (): Record<ItemCategory, number> => ({
+  clothes: 0, sleep: 0, tech: 0, repair: 0, hygiene: 0, food: 0, docs: 0, other: 0,
+})
+
+export function computePacking(state: WizardState): PackingStats {
+  const catalog = buildCatalog(state.customItems)
+  const bagStats: Record<string, BagStats> = {}
+
+  for (const bag of state.bags) {
+    bagStats[bag.id] = {
+      totalWeight: 0,
+      totalVolume: 0,
+      effectiveVolume: 0,
+      weightPercent: 0,
+      volumePercent: 0,
+      overWeight: false,
+      overVolume: false,
+    }
+  }
+
+  let totalWeight = 0
+  let wornWeight = 0
+  let consumableWeight = 0
+  let unassignedWeight = 0
+  let unassignedVolume = 0
+  const categoryWeights = emptyCategoryWeights()
+
+  for (const selectedItem of state.selectedItems) {
+    const spec = catalog.get(selectedItem.itemId)
+    const qty = Math.max(1, selectedItem.qty || 1)
+    const lineWeight = selectedItem.weight * qty
+    const lineVolume = selectedItem.volume * qty
+
+    totalWeight += lineWeight
+
+    // Worn gear is on your body: it never enters a bag, never shifts the balance,
+    // and never counts against the event's load limit.
+    if (selectedItem.worn) {
+      wornWeight += lineWeight
+      continue
+    }
+
+    if (selectedItem.consumable) consumableWeight += lineWeight
+    categoryWeights[spec?.category ?? 'other'] += lineWeight
+
+    const effective = +(lineVolume * packingFactorFor(spec)).toFixed(3)
+
+    if (selectedItem.bagId && bagStats[selectedItem.bagId]) {
+      bagStats[selectedItem.bagId].totalWeight += lineWeight
+      bagStats[selectedItem.bagId].totalVolume += lineVolume
+      bagStats[selectedItem.bagId].effectiveVolume += effective
+    } else {
+      unassignedWeight += lineWeight
+      unassignedVolume += lineVolume
+    }
+  }
+
+  // Percentages and overflows use effective volume
+  for (const bag of state.bags) {
+    const stats = bagStats[bag.id]
+    stats.effectiveVolume = +stats.effectiveVolume.toFixed(3)
+    stats.weightPercent = bag.maxWeight > 0 ? (stats.totalWeight / 1000 / bag.maxWeight) * 100 : 0
+    stats.volumePercent = bag.volume > 0 ? (stats.effectiveVolume / bag.volume) * 100 : 0
+    stats.overWeight = stats.totalWeight / 1000 > bag.maxWeight
+    stats.overVolume = stats.effectiveVolume > bag.volume
+  }
+
+  // Weight distribution
+  const zoneWeight = { front: 0, center: 0, rear: 0 }
+  for (const bag of state.bags) {
+    const zone = positionZone[bag.position]
+    zoneWeight[zone] += bagStats[bag.id].totalWeight
+  }
+
+  const onBikeWeight = totalWeight - wornWeight
+  const assignedWeight = onBikeWeight - unassignedWeight
+  const distribution = {
+    front: assignedWeight > 0 ? (zoneWeight.front / assignedWeight) * 100 : 0,
+    center: assignedWeight > 0 ? (zoneWeight.center / assignedWeight) * 100 : 0,
+    rear: assignedWeight > 0 ? (zoneWeight.rear / assignedWeight) * 100 : 0,
+  }
+
+  const onBikeWeightKg = onBikeWeight / 1000
+  const isOverMaxWeight = state.event ? onBikeWeightKg > state.event.maxAcceptableWeight : false
+  const isInRecommendedRange = state.event
+    ? onBikeWeightKg >= state.event.recommendedWeight.min && onBikeWeightKg <= state.event.recommendedWeight.max
+    : true
+
+  return {
+    totalWeight,
+    totalWeightKg: totalWeight / 1000,
+    wornWeight,
+    onBikeWeight,
+    onBikeWeightKg,
+    consumableWeight,
+    baseWeight: onBikeWeight - consumableWeight,
+    bagStats,
+    unassignedWeight,
+    unassignedVolume,
+    distribution,
+    categoryWeights,
+    isOverMaxWeight,
+    isInRecommendedRange,
+    catalog,
+  }
+}
+
 export function usePacking(state: WizardState): PackingStats {
-  return useMemo(() => {
-    const bagStats: Record<string, BagStats> = {}
-
-    for (const bag of state.bags) {
-      bagStats[bag.id] = {
-        totalWeight: 0,
-        totalVolume: 0,
-        effectiveVolume: 0,
-        weightPercent: 0,
-        volumePercent: 0,
-        overWeight: false,
-        overVolume: false,
-      }
-    }
-
-    let totalWeight = 0
-    let unassignedWeight = 0
-    let unassignedVolume = 0
-
-    for (const selectedItem of state.selectedItems) {
-      totalWeight += selectedItem.weight
-      const { effective } = getEffectiveVolume(selectedItem.itemId, selectedItem.volume)
-
-      if (selectedItem.bagId && bagStats[selectedItem.bagId]) {
-        bagStats[selectedItem.bagId].totalWeight += selectedItem.weight
-        bagStats[selectedItem.bagId].totalVolume += selectedItem.volume
-        bagStats[selectedItem.bagId].effectiveVolume += effective
-      } else {
-        unassignedWeight += selectedItem.weight
-        unassignedVolume += selectedItem.volume
-      }
-    }
-
-    // Percentages and overflows use effective volume
-    for (const bag of state.bags) {
-      const stats = bagStats[bag.id]
-      stats.weightPercent = bag.maxWeight > 0 ? (stats.totalWeight / 1000 / bag.maxWeight) * 100 : 0
-      stats.volumePercent = bag.volume > 0 ? (stats.effectiveVolume / bag.volume) * 100 : 0
-      stats.overWeight = stats.totalWeight / 1000 > bag.maxWeight
-      stats.overVolume = stats.effectiveVolume > bag.volume
-    }
-
-    // Weight distribution
-    const zoneWeight = { front: 0, center: 0, rear: 0 }
-    for (const bag of state.bags) {
-      const zone = positionZone[bag.position]
-      zoneWeight[zone] += bagStats[bag.id].totalWeight
-    }
-
-    const assignedWeight = totalWeight - unassignedWeight
-    const distribution = {
-      front: assignedWeight > 0 ? (zoneWeight.front / assignedWeight) * 100 : 0,
-      center: assignedWeight > 0 ? (zoneWeight.center / assignedWeight) * 100 : 0,
-      rear: assignedWeight > 0 ? (zoneWeight.rear / assignedWeight) * 100 : 0,
-    }
-
-    const totalWeightKg = totalWeight / 1000
-    const isOverMaxWeight = state.event ? totalWeightKg > state.event.maxAcceptableWeight : false
-    const isInRecommendedRange = state.event
-      ? totalWeightKg >= state.event.recommendedWeight.min && totalWeightKg <= state.event.recommendedWeight.max
-      : true
-
-    return {
-      totalWeight,
-      totalWeightKg,
-      bagStats,
-      unassignedWeight,
-      unassignedVolume,
-      distribution,
-      isOverMaxWeight,
-      isInRecommendedRange,
-    }
-  }, [state.bags, state.selectedItems, state.event])
-}
-
-export function getItemSpec(itemId: string): ItemSpec | undefined {
-  return items.find(i => i.id === itemId)
-}
-
-export function getItemPackingFactor(itemId: string): number {
-  const spec = items.find(i => i.id === itemId)
-  if (!spec) return 1.0
-  return PACKING_FACTOR[spec.rigidity]?.[spec.shape] ?? 1.0
+  // The reducer hands back a fresh object on every dispatch, so keying the memo on
+  // the whole state is as tight as listing its fields — and it keeps the React
+  // Compiler able to optimize this hook.
+  return useMemo(() => computePacking(state), [state])
 }

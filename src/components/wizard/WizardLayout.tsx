@@ -32,7 +32,7 @@ function StepContent({ step }: { step: number }) {
 }
 
 export function WizardLayout() {
-  const { state, nextStep, prevStep, goToStep, canProceed, restoredFrom, dismissRestoreNotice, reset } = useWizard()
+  const { state, dispatch, nextStep, prevStep, goToStep, canProceed, restoredFrom, dismissRestoreNotice, reset } = useWizard()
   const contentRef = useRef<HTMLDivElement>(null)
   const prevStepRef = useRef(state.step)
 
@@ -75,9 +75,27 @@ export function WizardLayout() {
       {/* Header */}
       <header className="bg-base-100/80 backdrop-blur-sm border-b border-base-300 sticky top-0 z-20 print:hidden">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="heading-md text-base-content">Bike Load Simulator</h1>
-            <p className="text-xs text-base-content/50 mt-0.5">by Bike Adventure Series</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="heading-md text-base-content">Bike Load Simulator</h1>
+              <p className="text-xs text-base-content/50 mt-0.5">by Bike Adventure Series</p>
+            </div>
+            <div className="join border border-base-300 rounded-lg" role="group" aria-label="Units">
+              <button
+                onClick={() => dispatch({ type: 'SET_UNIT', unit: 'metric' })}
+                aria-pressed={state.unit === 'metric'}
+                className={`btn btn-xs join-item ${state.unit === 'metric' ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                kg
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'SET_UNIT', unit: 'imperial' })}
+                aria-pressed={state.unit === 'imperial'}
+                className={`btn btn-xs join-item ${state.unit === 'imperial' ? 'btn-primary' : 'btn-ghost'}`}
+              >
+                lb
+              </button>
+            </div>
           </div>
 
           {/* Timeline breadcrumb */}
