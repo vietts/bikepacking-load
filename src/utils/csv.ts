@@ -24,7 +24,7 @@ const UNIT_TO_GRAMS: Record<string, number> = {
 /** LighterPack categories are free text, so map by keyword and fall back to 'other'. */
 const CATEGORY_KEYWORDS: [RegExp, ItemCategory][] = [
   [/cloth|wear|apparel|worn|layer/i, 'clothes'],
-  [/sleep|shelter|tent|bag|pad|bivy|camp/i, 'sleep'],
+  [/sleep|shelter|tent|sleeping ?bag|pad|bivy|camp/i, 'sleep'],
   [/tech|electronic|nav|gps|power|light|photo/i, 'tech'],
   [/repair|tool|spare|maintenance|bike/i, 'repair'],
   [/hygien|toilet|wash|first ?aid|medical|health/i, 'hygiene'],

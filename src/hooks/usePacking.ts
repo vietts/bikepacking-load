@@ -47,7 +47,7 @@ const emptyCategoryWeights = (): Record<ItemCategory, number> => ({
   clothes: 0, sleep: 0, tech: 0, repair: 0, hygiene: 0, food: 0, docs: 0, other: 0,
 })
 
-export function computePacking(state: WizardState): PackingStats {
+export function computePacking(state: Pick<WizardState, 'bags' | 'selectedItems' | 'customItems' | 'event'>): PackingStats {
   const catalog = buildCatalog(state.customItems)
   const bagStats: Record<string, BagStats> = {}
 
@@ -151,8 +151,13 @@ export function computePacking(state: WizardState): PackingStats {
 }
 
 export function usePacking(state: WizardState): PackingStats {
-  // The reducer hands back a fresh object on every dispatch, so keying the memo on
-  // the whole state is as tight as listing its fields — and it keeps the React
-  // Compiler able to optimize this hook.
-  return useMemo(() => computePacking(state), [state])
+  // Only these fields feed computePacking (via buildCatalog + the loop below).
+  // Destructuring them — rather than closing over `state` itself — keys the memo
+  // on exactly what's read, so a dispatch that only touches step/unit/bike (e.g.
+  // page navigation) no longer re-runs the calculation.
+  const { bags, selectedItems, customItems, event } = state
+  return useMemo(
+    () => computePacking({ bags, selectedItems, customItems, event }),
+    [bags, selectedItems, customItems, event]
+  )
 }

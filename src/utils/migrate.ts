@@ -1,4 +1,7 @@
-import type { WizardState, SelectedItem, ItemSpec, Bag, UnitSystem } from '../types'
+import type { WizardState, SelectedItem, ItemSpec, ItemCategory, ItemPriority, Bag, UnitSystem } from '../types'
+
+const ITEM_CATEGORIES: ItemCategory[] = ['clothes', 'sleep', 'tech', 'repair', 'hygiene', 'food', 'docs', 'other']
+const ITEM_PRIORITIES: ItemPriority[] = ['essential', 'high', 'medium', 'low', 'conditional']
 
 /**
  * Setups saved before quantities and worn/consumable existed are still out there —
@@ -46,16 +49,18 @@ function normalizeCustomItem(raw: unknown): ItemSpec | null {
   return {
     id: item.id,
     name: item.name,
-    category: item.category ?? 'other',
+    category: ITEM_CATEGORIES.includes(item.category as ItemCategory) ? (item.category as ItemCategory) : 'other',
     weight: { min: weightMin, max: weightMax },
     volume: { min: volumeMin, max: volumeMax },
-    priority: item.priority ?? 'medium',
+    priority: ITEM_PRIORITIES.includes(item.priority as ItemPriority) ? (item.priority as ItemPriority) : 'medium',
     shape: item.shape === 'cylindrical' ? 'cylindrical' : 'rectangular',
     rigidity: item.rigidity === 'rigid' ? 'rigid' : 'soft',
     preferredBag: item.preferredBag,
     note: typeof item.note === 'string' ? item.note : undefined,
   }
 }
+
+const TOTAL_STEPS = 6
 
 export function normalizeState(raw: unknown): WizardState | null {
   if (!raw || typeof raw !== 'object') return null
@@ -85,7 +90,7 @@ export function normalizeState(raw: unknown): WizardState | null {
   const unit: UnitSystem = state.unit === 'imperial' ? 'imperial' : 'metric'
 
   return {
-    step: Math.max(1, Math.round(num(state.step, 1))),
+    step: Math.max(1, Math.min(TOTAL_STEPS, Math.round(num(state.step, 1)))),
     bike: state.bike ?? null,
     event: state.event ?? null,
     bags,

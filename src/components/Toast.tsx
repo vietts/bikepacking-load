@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface ToastProps {
   message: string
@@ -11,10 +11,19 @@ interface ToastProps {
 // Lightweight toast — no dependency. Auto-dismisses after `duration`, and can
 // carry a single action (e.g. Undo). Render at most one at a time.
 export function Toast({ message, actionLabel, onAction, onDismiss, duration = 6000 }: ToastProps) {
+  // Callers often pass an inline onDismiss, which is a new function every render.
+  // Reading it through a ref keeps the timer keyed only on `duration`, so an
+  // unrelated re-render of the caller no longer restarts the countdown. The ref
+  // is updated in an effect (not during render) to stay a pure render pass.
+  const onDismissRef = useRef(onDismiss)
   useEffect(() => {
-    const id = window.setTimeout(onDismiss, duration)
+    onDismissRef.current = onDismiss
+  })
+
+  useEffect(() => {
+    const id = window.setTimeout(() => onDismissRef.current(), duration)
     return () => window.clearTimeout(id)
-  }, [onDismiss, duration])
+  }, [duration])
 
   return (
     <div className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">

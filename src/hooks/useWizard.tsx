@@ -160,14 +160,20 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       }
     case 'IMPORT_ITEMS': {
       // Imported rows are additive: an existing selection wins so a re-import
-      // never silently overwrites quantities the user already tuned.
-      const existing = new Set(state.selectedItems.map(i => i.itemId))
+      // never silently overwrites quantities the user already tuned. Each import
+      // mints fresh ids (see rowsToState), so itemId can never collide — name is
+      // the only stable key a re-imported row shares with what's already there.
+      const existingNames = new Set(state.customItems.map(i => i.name.trim().toLowerCase()))
+      const newCustomItems = action.customItems.filter(
+        i => !existingNames.has(i.name.trim().toLowerCase())
+      )
+      const newIds = new Set(newCustomItems.map(i => i.id))
       return {
         ...state,
-        customItems: [...state.customItems, ...action.customItems],
+        customItems: [...state.customItems, ...newCustomItems],
         selectedItems: [
           ...state.selectedItems,
-          ...action.selectedItems.filter(i => !existing.has(i.itemId)),
+          ...action.selectedItems.filter(i => newIds.has(i.itemId)),
         ],
       }
     }

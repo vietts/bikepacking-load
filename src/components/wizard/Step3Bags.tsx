@@ -63,8 +63,14 @@ export function Step3Bags() {
 
   function undoRemove() {
     if (!removed) return
-    dispatch({ type: 'ADD_BAG', bag: removed.bag })
-    removed.itemIds.forEach(itemId => dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: removed.bag.id }))
+    // A new bag of the same type may have been picked while the toast was still
+    // open (remove → reselect a preset) — re-adding the snapshot would then leave
+    // two bags of the same type. The newer pick wins; the undo becomes a no-op.
+    const alreadyReplaced = state.bags.some(b => b.type === removed.bag.type)
+    if (!alreadyReplaced) {
+      dispatch({ type: 'ADD_BAG', bag: removed.bag })
+      removed.itemIds.forEach(itemId => dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: removed.bag.id }))
+    }
     setRemoved(null)
   }
 

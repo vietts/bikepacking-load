@@ -33,6 +33,7 @@ export function Step6Share() {
   const { state } = useWizard()
   const packing = usePacking(state)
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
 
   const shareUrl = getShareUrl(state)
   const bagsInFlowOrder = [...state.bags].sort(
@@ -43,8 +44,15 @@ export function Step6Share() {
 
   function copyUrl() {
     navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopyError(false)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      // Clipboard permission denied / insecure context — the link is still
+      // selectable in the input above, so tell the user rather than staying silent.
+      setCopied(false)
+      setCopyError(true)
+      setTimeout(() => setCopyError(false), 4000)
     })
   }
 
@@ -183,6 +191,11 @@ export function Step6Share() {
             {copied ? '✓ Copied!' : 'Copy link'}
           </button>
         </div>
+        {copyError && (
+          <p role="alert" className="text-small text-error">
+            Couldn't copy automatically — select the link above and copy it manually.
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button onClick={() => window.print()} className="btn flex-1 border border-base-300">
