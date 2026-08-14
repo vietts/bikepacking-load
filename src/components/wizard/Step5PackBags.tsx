@@ -99,7 +99,12 @@ export function Step5PackBags() {
 
   const stats = packing.bagStats[bag.id]
   const inBag = state.selectedItems.filter(i => i.bagId === bag.id)
-  const unplaced = state.selectedItems.filter(i => !i.bagId && !i.worn)
+  // Mounted gear (bottles, GPS, lights) rides on its own attachments — it's
+  // never "still to place", it gets its own reassurance card instead.
+  const mountedItems = state.selectedItems.filter(i => catalog.get(i.itemId)?.category === 'mounted')
+  const unplaced = state.selectedItems.filter(i =>
+    !i.bagId && !i.worn && catalog.get(i.itemId)?.category !== 'mounted'
+  )
   const suggestedHere = unplaced.filter(si => catalog.get(si.itemId)?.preferredBag === bag.type)
   const otherUnplaced = unplaced.filter(si => catalog.get(si.itemId)?.preferredBag !== bag.type)
 
@@ -273,9 +278,12 @@ export function Step5PackBags() {
               return (
                 <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
                   {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
-                  <span className="text-sm font-medium flex-1 min-w-0 truncate">
-                    {spec?.name ?? si.itemId}
-                    {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
+                  <span className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate">
+                      {spec?.name ?? si.itemId}
+                      {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
+                    </span>
+                    {si.note && <span className="text-[11px] text-primary/80 block truncate">✎ {si.note}</span>}
                   </span>
                   <span className="text-small text-base-content/35 shrink-0">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
                   <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
@@ -368,6 +376,28 @@ export function Step5PackBags() {
         {unplaced.length === 0 && (
           <div className="card border-2 border-success/30 bg-success/5 p-4">
             <p className="text-small text-success font-medium">✓ Everything has a home. Check each bag, then continue.</p>
+          </div>
+        )}
+
+        {/* Gear on its own mounts — informational, nothing to do here */}
+        {mountedItems.length > 0 && (
+          <div className="card card-border bg-base-100 p-4 space-y-2">
+            <p className="label-caps text-base-content/40">Mounted on the bike</p>
+            <p className="text-[11px] text-base-content/35 -mt-1">These ride on their own attachments — no bag needed.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {mountedItems.map(si => {
+                const spec = catalog.get(si.itemId)
+                const Icon = spec ? itemCategoryIcons[spec.category] : null
+                return (
+                  <span key={si.itemId} className="badge badge-ghost badge-lg gap-1.5">
+                    {Icon && <Icon size={14} />}
+                    {spec?.name ?? si.itemId}
+                    {si.qty > 1 && <span className="opacity-60">×{si.qty}</span>}
+                    <span className="opacity-50">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
+                  </span>
+                )
+              })}
+            </div>
           </div>
         )}
 

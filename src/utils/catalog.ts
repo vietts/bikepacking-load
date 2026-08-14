@@ -29,12 +29,18 @@ export const CATEGORY_LABELS: Record<ItemCategory, string> = {
   hygiene: 'Hygiene',
   food: 'Food',
   docs: 'Docs',
+  mounted: 'On the bike',
   other: 'Other',
 }
 
 export const CATEGORY_ORDER: ItemCategory[] = [
-  'clothes', 'sleep', 'tech', 'repair', 'hygiene', 'food', 'docs', 'other',
+  'clothes', 'sleep', 'tech', 'repair', 'hygiene', 'food', 'docs', 'mounted', 'other',
 ]
+
+/** Gear that rides on its own attachments — weighs on the bike, never occupies a bag. */
+export function isMounted(itemId: string, catalog: Catalog): boolean {
+  return catalog.get(itemId)?.category === 'mounted'
+}
 
 /**
  * Packing efficiency factors based on shape + rigidity.

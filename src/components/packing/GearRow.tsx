@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Bag, ItemSpec, SelectedItem, UnitSystem } from '../../types'
 import { isCustomItem } from '../../utils/catalog'
 import { formatItemWeight, formatVolume } from '../../utils/units'
@@ -16,6 +17,7 @@ interface GearRowProps {
   onToggleWorn: () => void
   onToggleConsumable: () => void
   onToggleToBuy: () => void
+  onNote: (note: string) => void
   onRemoveCustom: () => void
 }
 
@@ -25,8 +27,9 @@ function bagLabel(bag: Bag): string {
 
 export function GearRow({
   spec, selected, bags, essential, unnecessary, eventName, unit,
-  onToggle, onQty, onAssign, onToggleWorn, onToggleConsumable, onToggleToBuy, onRemoveCustom,
+  onToggle, onQty, onAssign, onToggleWorn, onToggleConsumable, onToggleToBuy, onNote, onRemoveCustom,
 }: GearRowProps) {
+  const [editingNote, setEditingNote] = useState(false)
   const weightRange = spec.weight.min === spec.weight.max
     ? formatItemWeight(spec.weight.min, unit)
     : `${formatItemWeight(spec.weight.min, unit)}–${formatItemWeight(spec.weight.max, unit)}`
@@ -40,6 +43,7 @@ export function GearRow({
   const toBuy = selected?.toBuy ?? false
   const custom = isCustomItem(spec.id)
   const noVolume = custom && spec.volume.max === 0
+  const mounted = spec.category === 'mounted'
 
   return (
     <div
@@ -74,6 +78,9 @@ export function GearRow({
               )}
             </div>
             {spec.note && <div className="text-small text-base-content/60 mt-0.5 italic">{spec.note}</div>}
+            {selected?.note && !editingNote && (
+              <div className="text-small text-primary/90 mt-0.5">✎ {selected.note}</div>
+            )}
             {noVolume && isSelected && (
               <div className="text-small text-base-content/60 mt-0.5">
                 No size on this one — it won't count toward how full your bags are.
@@ -122,14 +129,16 @@ export function GearRow({
             </button>
           </div>
 
-          <button
-            onClick={onToggleWorn}
-            aria-pressed={worn}
-            title="You'll be wearing this, so it never goes in a bag"
-            className={`btn btn-xs min-h-[32px] ${worn ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
-          >
-            {worn ? '👕 Wearing it' : 'Wearing it'}
-          </button>
+          {!mounted && (
+            <button
+              onClick={onToggleWorn}
+              aria-pressed={worn}
+              title="You'll be wearing this, so it never goes in a bag"
+              className={`btn btn-xs min-h-[32px] ${worn ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
+            >
+              {worn ? '👕 Wearing it' : 'Wearing it'}
+            </button>
+          )}
 
           <button
             onClick={onToggleConsumable}
@@ -149,7 +158,18 @@ export function GearRow({
             {toBuy ? '🛒 To buy' : 'To buy'}
           </button>
 
-          {worn ? (
+          <button
+            onClick={() => setEditingNote(e => !e)}
+            aria-expanded={editingNote}
+            title="A reminder to yourself — which ones, how many, where they are"
+            className="btn btn-xs btn-ghost border border-base-300 min-h-[32px]"
+          >
+            ✎ Note
+          </button>
+
+          {mounted ? (
+            <span className="text-small text-base-content/50 italic">on its own mount, not in a bag</span>
+          ) : worn ? (
             <span className="text-small text-base-content/50 italic">on you, not on the bike</span>
           ) : bags.length > 0 && (
             <select
@@ -164,6 +184,25 @@ export function GearRow({
               ))}
             </select>
           )}
+        </div>
+      )}
+
+      {isSelected && editingNote && (
+        <div className="mt-2 pl-8">
+          <input
+            type="text"
+            defaultValue={selected?.note ?? ''}
+            placeholder="e.g. USB-C x2, Garmin x1"
+            maxLength={200}
+            autoFocus
+            aria-label={`Note for ${spec.name}`}
+            onBlur={e => { onNote(e.target.value); setEditingNote(false) }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') setEditingNote(false)
+            }}
+            className="input input-sm input-bordered w-full"
+          />
         </div>
       )}
     </div>

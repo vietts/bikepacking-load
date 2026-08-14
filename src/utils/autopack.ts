@@ -1,5 +1,5 @@
 import type { WizardState, SelectedItem, Bag } from '../types'
-import { packingFactorFor, type Catalog } from './catalog'
+import { isMounted, packingFactorFor, type Catalog } from './catalog'
 import { fitsGirth } from '../hooks/usePacking'
 
 /**
@@ -63,7 +63,7 @@ export function autoAssign(state: WizardState, catalog: Catalog): SelectedItem[]
   // ones squeeze in anywhere that's left.
   const pending = state.selectedItems
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => !item.worn && !item.bagId)
+    .filter(({ item }) => !item.worn && !item.bagId && !isMounted(item.itemId, catalog))
     .sort((a, b) => b.item.volume * b.item.qty - a.item.volume * a.item.qty)
 
   const assignments = new Map<number, string>()
@@ -104,6 +104,6 @@ export function autoAssign(state: WizardState, catalog: Catalog): SelectedItem[]
 }
 
 /** How many items an auto-pack run would place — used to hide the button when it'd do nothing. */
-export function countUnassigned(state: WizardState): number {
-  return state.selectedItems.filter(i => !i.worn && !i.bagId).length
+export function countUnassigned(state: WizardState, catalog: Catalog): number {
+  return state.selectedItems.filter(i => !i.worn && !i.bagId && !isMounted(i.itemId, catalog)).length
 }

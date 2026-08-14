@@ -70,6 +70,12 @@ describe('mapCategory', () => {
     expect(mapCategory('Electronics')).toBe('tech')
   })
 
+  it('maps bottle/cage categories to mounted, but not "Mountain gear"', () => {
+    expect(mapCategory('Bottles & Cages')).toBe('mounted')
+    expect(mapCategory('On-bike mounts')).toBe('mounted')
+    expect(mapCategory('Mountain gear')).not.toBe('mounted')
+  })
+
   it('falls back to "other" rather than guessing wrong', () => {
     expect(mapCategory('Miscellaneous whatnot')).toBe('other')
     expect(mapCategory('')).toBe('other')
@@ -112,6 +118,17 @@ describe('toCSV → parseCSV round trip', () => {
 
     expect(csv).toContain('"Tools, spares and bits"')
     expect(parseCSV(csv).rows[0].name).toBe('Tools, spares and bits')
+  })
+
+  it('exports the personal note in the Description column', () => {
+    const { customItems, selectedItems } = rowsToState([{
+      name: 'Charging cables', category: 'tech', sourceCategory: 'Tech', description: '',
+      qty: 1, weight: 40, volume: 0, worn: false, consumable: false,
+    }])
+    selectedItems[0].note = 'USB-C x2, Garmin x1'
+    const csv = toCSV(stateWith(customItems, selectedItems), buildCatalog(customItems))
+
+    expect(parseCSV(csv).rows[0].description).toBe('USB-C x2, Garmin x1')
   })
 
   it('carries the to-buy flag through export and re-import', () => {

@@ -66,9 +66,11 @@ export interface Bag {
   items: string[] // assigned selected item IDs
 }
 
+// 'mounted' is gear that rides on its own attachments (bottle cages, GPS mount,
+// lights) — it weighs on the bike but never occupies a bag.
 // 'other' is the home for items the user adds by hand or imports from a CSV,
 // where the source category doesn't map onto one of ours.
-export type ItemCategory = 'clothes' | 'sleep' | 'tech' | 'repair' | 'hygiene' | 'food' | 'docs' | 'other'
+export type ItemCategory = 'clothes' | 'sleep' | 'tech' | 'repair' | 'hygiene' | 'food' | 'docs' | 'mounted' | 'other'
 export type ItemPriority = 'essential' | 'high' | 'medium' | 'low' | 'conditional'
 
 export interface ItemSpec {
@@ -95,6 +97,7 @@ export interface SelectedItem {
   worn?: boolean // you're wearing it, so it never goes in a bag
   consumable?: boolean // food, water, gas — it shrinks as you ride
   toBuy?: boolean // planned but not owned yet — shows up in the shopping list
+  note?: string // rider's own reminder, e.g. "USB-C x2, Garmin x1" on charging cables
   auto?: boolean // true = pre-selected because it's essential for the chosen event (not a manual pick)
 }
 

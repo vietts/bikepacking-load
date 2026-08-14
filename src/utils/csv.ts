@@ -23,6 +23,8 @@ const UNIT_TO_GRAMS: Record<string, number> = {
 
 /** LighterPack categories are free text, so map by keyword and fall back to 'other'. */
 const CATEGORY_KEYWORDS: [RegExp, ItemCategory][] = [
+  // \b keeps "mount"/"mounts"/"mounted" from swallowing "Mountain gear".
+  [/bottle|cage|\bmount(ed|s)?\b|on.?bike/i, 'mounted'],
   [/cloth|wear|apparel|worn|layer/i, 'clothes'],
   [/sleep|shelter|tent|sleeping ?bag|pad|bivy|camp/i, 'sleep'],
   [/tech|electronic|nav|gps|power|light|photo/i, 'tech'],
@@ -56,7 +58,8 @@ export function toCSV(state: WizardState, catalog: Catalog): string {
     return [
       spec?.name ?? item.itemId,
       spec?.category ?? 'other',
-      spec?.note ?? '',
+      // The rider's own reminder ("USB-C x2, Garmin x1") beats the catalog blurb.
+      item.note ?? spec?.note ?? '',
       item.qty,
       Math.round(item.weight),
       'g',

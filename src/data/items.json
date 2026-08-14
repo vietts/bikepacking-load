@@ -215,7 +215,7 @@
   {
     "id": "gps",
     "name": "GPS / bike computer",
-    "category": "tech",
+    "category": "mounted",
     "weight": { "min": 80, "max": 130 },
     "volume": { "min": 0.1, "max": 0.1 },
     "priority": "essential",
@@ -272,25 +272,23 @@
   {
     "id": "lights",
     "name": "Front + rear lights",
-    "category": "tech",
+    "category": "mounted",
     "weight": { "min": 80, "max": 200 },
     "volume": { "min": 0.2, "max": 0.2 },
     "priority": "essential",
     "shape": "cylindrical",
     "rigidity": "rigid",
-    "preferredBag": "frame",
     "note": "Safety first"
   },
   {
     "id": "backup_light",
     "name": "Backup light",
-    "category": "tech",
+    "category": "mounted",
     "weight": { "min": 50, "max": 100 },
     "volume": { "min": 0.1, "max": 0.1 },
     "priority": "medium",
     "shape": "cylindrical",
     "rigidity": "rigid",
-    "preferredBag": "frame",
     "note": "Essential for NC4000"
   },
   {
@@ -455,7 +453,7 @@
   {
     "id": "water_bottles",
     "name": "Water bottles (x2, 750ml)",
-    "category": "food",
+    "category": "mounted",
     "weight": { "min": 150, "max": 200 },
     "volume": { "min": 0, "max": 0 },
     "priority": "essential",

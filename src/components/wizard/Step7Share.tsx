@@ -16,13 +16,14 @@ function byBulk(items: SelectedItem[]): SelectedItem[] {
   return [...items].sort((a, b) => b.volume * b.qty - a.volume * a.qty)
 }
 
-function ChecklistRow({ name, qty, grams, unit }: { name: string; qty: number; grams: number; unit: UnitSystem }) {
+function ChecklistRow({ name, qty, grams, unit, note }: { name: string; qty: number; grams: number; unit: UnitSystem; note?: string }) {
   return (
-    <li className="flex items-center gap-3">
-      <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0" />
+    <li className="flex items-start gap-3">
+      <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0 mt-1" />
       <span className="flex-1 text-body">
         {name}
         {qty > 1 && <span className="text-base-content/60"> ×{qty}</span>}
+        {note && <span className="block text-small text-base-content/60 italic">{note}</span>}
       </span>
       <span className="text-small text-base-content/60 tabular-nums shrink-0">{formatItemWeight(grams * qty, unit)}</span>
     </li>
@@ -120,15 +121,39 @@ export function Step7Share() {
                 </div>
                 <ul className="space-y-1.5">
                   {assignedItems.map(si => (
-                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} note={si.note} />
                   ))}
                 </ul>
               </div>
             )
           })}
 
+          {/* Gear on its own mounts — bottles, GPS, lights. On the bike, not in a bag. */}
           {(() => {
-            const unassigned = byBulk(state.selectedItems.filter(i => !i.bagId && !i.worn))
+            const mounted = byBulk(state.selectedItems.filter(i => packing.catalog.get(i.itemId)?.category === 'mounted'))
+            if (mounted.length === 0) return null
+            const mountedWeight = mounted.reduce((s, i) => s + i.weight * i.qty, 0)
+            return (
+              <div className="break-inside-avoid">
+                <div className="flex justify-between items-baseline border-b border-base-300 pb-1.5 mb-2.5">
+                  <h3 className="heading-md text-sm">Mounted on the bike</h3>
+                  <span className="text-small text-base-content/60 shrink-0">
+                    {formatLoad(mountedWeight, state.unit)} · on its own attachments
+                  </span>
+                </div>
+                <ul className="space-y-1.5">
+                  {mounted.map(si => (
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} note={si.note} />
+                  ))}
+                </ul>
+              </div>
+            )
+          })()}
+
+          {(() => {
+            const unassigned = byBulk(state.selectedItems.filter(i =>
+              !i.bagId && !i.worn && packing.catalog.get(i.itemId)?.category !== 'mounted'
+            ))
             if (unassigned.length === 0) return null
             return (
               <div className="break-inside-avoid">
@@ -140,7 +165,7 @@ export function Step7Share() {
                 </div>
                 <ul className="space-y-1.5">
                   {unassigned.map(si => (
-                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} note={si.note} />
                   ))}
                 </ul>
               </div>
@@ -158,7 +183,7 @@ export function Step7Share() {
               </div>
               <ul className="space-y-1.5">
                 {wornItems.map(si => (
-                  <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                  <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} note={si.note} />
                 ))}
               </ul>
             </div>
@@ -179,7 +204,7 @@ export function Step7Share() {
               {toBuyItems.length > 0 && (
                 <ul className="space-y-1.5 mb-4">
                   {toBuyItems.map(si => (
-                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} note={si.note} />
                   ))}
                 </ul>
               )}

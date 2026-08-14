@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computePacking } from '../../hooks/usePacking'
 import { normalizeState } from '../migrate'
-import { autoAssign } from '../autopack'
+import { autoAssign, countUnassigned } from '../autopack'
 import { buildCatalog } from '../catalog'
 import type { Bag, BikeEvent, SelectedItem, WizardState } from '../../types'
 
@@ -197,5 +197,58 @@ describe('autoAssign', () => {
   it('does nothing when there are no bags', () => {
     const base = state({ selectedItems: [item({ itemId: 'multitool' })] })
     expect(autoAssign(base, buildCatalog([]))).toBe(base.selectedItems)
+  })
+})
+
+describe('mounted gear — rides on its own attachments', () => {
+  // gps and water_bottles are category 'mounted' in the catalog
+  it('counts toward the on-bike load but never toward unassigned', () => {
+    const packing = computePacking(state({
+      bags: [bag({ id: 'f1', type: 'frame', position: 'center_low' })],
+      selectedItems: [
+        item({ itemId: 'gps', weight: 100 }),
+        item({ itemId: 'water_bottles', weight: 300 }),
+        item({ itemId: 'spare_tubes', weight: 200 }), // genuinely unassigned
+      ],
+    }))
+
+    expect(packing.onBikeWeight).toBe(600)
+    expect(packing.unassignedWeight).toBe(200)
+  })
+
+  it('is skipped by autoAssign and countUnassigned', () => {
+    const catalog = buildCatalog()
+    const s = state({
+      bags: [bag({ id: 'f1', type: 'frame', position: 'center_low' })],
+      selectedItems: [item({ itemId: 'gps' }), item({ itemId: 'spare_tubes' })],
+    })
+
+    const assigned = autoAssign(s, catalog)
+    expect(assigned.find(i => i.itemId === 'gps')?.bagId).toBeNull()
+    expect(assigned.find(i => i.itemId === 'spare_tubes')?.bagId).toBe('f1')
+    expect(countUnassigned(s, catalog)).toBe(1)
+  })
+
+  it('loses a stale bag assignment on load', () => {
+    const normalized = normalizeState({
+      bags: [{ id: 'f1', type: 'frame', position: 'center_low', volume: 6, maxWeight: 4, items: [] }],
+      selectedItems: [{ itemId: 'gps', bagId: 'f1', weight: 100, volume: 0.1, qty: 1 }],
+    })!
+    expect(normalized.selectedItems[0].bagId).toBeNull()
+  })
+})
+
+describe('normalizeState — per-item notes', () => {
+  it('keeps a trimmed note and drops junk', () => {
+    const normalized = normalizeState({
+      selectedItems: [
+        { itemId: 'a', weight: 1, volume: 0, qty: 1, note: '  USB-C x2, Garmin x1  ' },
+        { itemId: 'b', weight: 1, volume: 0, qty: 1, note: 42 },
+        { itemId: 'c', weight: 1, volume: 0, qty: 1, note: 'x'.repeat(500) },
+      ],
+    })!
+    expect(normalized.selectedItems[0].note).toBe('USB-C x2, Garmin x1')
+    expect(normalized.selectedItems[1].note).toBeUndefined()
+    expect(normalized.selectedItems[2].note).toHaveLength(200)
   })
 })
