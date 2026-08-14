@@ -196,13 +196,15 @@ export function WizardLayout() {
             ← Back
           </button>
 
-          {state.step < 7 && (
+          {/* Steps 4 and 5 carry their own big CTA (guided categories / next bag),
+              so the generic Continue would only compete with it. */}
+          {state.step < 7 && state.step !== 4 && state.step !== 5 && (
             <button
               onClick={nextStep}
               disabled={!canProceed()}
               className="btn btn-primary gap-1"
             >
-              {state.step === 5 ? 'Review list' : 'Continue'} →
+              Continue →
             </button>
           )}
         </div>

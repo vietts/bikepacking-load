@@ -94,6 +94,7 @@ export interface SelectedItem {
   qty: number // how many you're bringing — totals multiply by this
   worn?: boolean // you're wearing it, so it never goes in a bag
   consumable?: boolean // food, water, gas — it shrinks as you ride
+  toBuy?: boolean // planned but not owned yet — shows up in the shopping list
   auto?: boolean // true = pre-selected because it's essential for the chosen event (not a manual pick)
 }
 

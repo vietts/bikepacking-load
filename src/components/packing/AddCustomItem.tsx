@@ -45,9 +45,11 @@ export function AddCustomItem({ defaultCategory, onAdd }: AddCustomItemProps) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn btn-ghost btn-sm border border-dashed border-base-300 w-full">
-        + Add something of your own
-      </button>
+      <div className="text-center py-1">
+        <button onClick={() => setOpen(true)} className="link link-primary text-small no-underline hover:underline font-medium">
+          + Add your own
+        </button>
+      </div>
     )
   }
 

@@ -31,6 +31,7 @@ function normalizeSelectedItem(raw: unknown): SelectedItem | null {
     qty: Math.max(1, Math.round(num(item.qty, 1))),
     worn: item.worn === true,
     consumable: item.consumable === true,
+    toBuy: item.toBuy === true,
     auto: item.auto === true,
   }
 }

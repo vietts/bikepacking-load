@@ -1,11 +1,14 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking, type PackingStats } from '../../hooks/usePacking'
-import type { UnitSystem } from '../../types'
+import { usePacking, type PackingStats, type BagStats } from '../../hooks/usePacking'
+import type { Bag, SelectedItem, UnitSystem } from '../../types'
+import type { Catalog } from '../../utils/catalog'
 import { validate } from '../../utils/validation'
 import { prefersReducedMotion } from '../../utils/motion'
 import { CategoryBreakdown } from '../CategoryBreakdown'
-import { formatLoad, formatVolume, loadUnit, loadValue } from '../../utils/units'
+import { bagIcons } from '../../assets/icons/BagIcons'
+import { itemCategoryIcons } from '../../assets/icons/ItemCategoryIcons'
+import { formatItemWeight, formatLoad, formatVolume, loadUnit, loadValue } from '../../utils/units'
 import gsap from 'gsap'
 
 /**
@@ -44,6 +47,88 @@ function WeightBreakdown({ packing, unit }: { packing: PackingStats; unit: UnitS
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+const bagTypeLabels: Record<Bag['type'], string> = {
+  handlebar: 'Handlebar', frame: 'Frame', saddle: 'Saddle',
+  top_tube: 'Top Tube', fork: 'Fork Cages', rear_rack: 'Rear Rack',
+}
+
+/**
+ * One bag, expandable: closed it's a one-line summary with the two gauges,
+ * open it lists every item inside at a readable size — this replaced a wall
+ * of tiny badge pills nobody could actually re-check their packing against.
+ */
+function BagContents({ bag, stats, items, catalog, unit, defaultOpen }: {
+  bag: Bag
+  stats: BagStats | undefined
+  items: SelectedItem[]
+  catalog: Catalog
+  unit: UnitSystem
+  defaultOpen: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const listRef = useRef<HTMLUListElement>(null)
+  const BagIcon = bagIcons[bag.type]
+
+  useEffect(() => {
+    if (!open || !listRef.current || prefersReducedMotion()) return
+    gsap.fromTo(listRef.current.children,
+      { opacity: 0, y: 8 },
+      { opacity: 1, y: 0, duration: 0.3, stagger: 0.03, ease: 'power2.out' }
+    )
+  }, [open])
+
+  return (
+    <div className="card card-border bg-base-100 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full p-4 flex items-center gap-3 text-left hover:bg-base-200/30 transition-colors cursor-pointer"
+      >
+        <BagIcon className="text-base-content/50 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm">
+            {bagTypeLabels[bag.type]}
+            {bag.brand && <span className="text-base-content/50 font-normal"> · {bag.brand}</span>}
+          </div>
+          <div className="text-small text-base-content/50">
+            {items.length} item{items.length === 1 ? '' : 's'} · {formatLoad(stats?.totalWeight ?? 0, unit)} · {formatVolume(stats?.effectiveVolume ?? 0, unit)} of {formatVolume(bag.volume, unit)}
+          </div>
+        </div>
+        <span className={`text-base-content/40 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+
+      <div className="px-4 pb-3 flex gap-2">
+        <progress className={`progress flex-1 h-2 ${stats?.overWeight ? 'progress-error' : 'progress-success'}`} value={Math.min(100, stats?.weightPercent ?? 0)} max="100" />
+        <progress className={`progress flex-1 h-2 ${stats?.overVolume ? 'progress-error' : 'progress-info'}`} value={Math.min(100, stats?.volumePercent ?? 0)} max="100" />
+      </div>
+
+      {open && (
+        <ul ref={listRef} className="border-t border-base-300 divide-y divide-base-300/50">
+          {items.length === 0 && (
+            <li className="px-4 py-3 text-small text-base-content/40 italic">Nothing in this bag.</li>
+          )}
+          {items.map(si => {
+            const spec = catalog.get(si.itemId)
+            const Icon = spec ? itemCategoryIcons[spec.category] : null
+            return (
+              <li key={si.itemId} className="px-4 py-2.5 flex items-center gap-3">
+                {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
+                <span className="flex-1 min-w-0 text-sm truncate">
+                  {spec?.name ?? si.itemId}
+                  {si.qty > 1 && <span className="text-base-content/40"> ×{si.qty}</span>}
+                </span>
+                <span className="text-small text-base-content/50 tabular-nums shrink-0">
+                  {formatItemWeight(si.weight * si.qty, unit)}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -162,36 +247,20 @@ export function Step6Review() {
 
       <CategoryBreakdown weights={packing.categoryWeights} unit={state.unit} />
 
-      {/* Per-bag breakdown */}
-      <div ref={barsRef} className="card card-border bg-base-100 p-6 space-y-4">
-        <p className="label-caps text-base-content/60">Per-bag breakdown</p>
-        {state.bags.map(bag => {
-          const stats = packing.bagStats[bag.id]
-          if (!stats) return null
-          const assignedItems = state.selectedItems.filter(i => i.bagId === bag.id && !i.worn)
-          return (
-            <div key={bag.id} className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold">{bag.type.replace('_', ' ')}{bag.brand && <span className="text-base-content/60 font-normal"> · {bag.brand}</span>}</span>
-                <span className="text-base-content/60">
-                  {formatLoad(stats.totalWeight, state.unit)} · {formatVolume(stats.effectiveVolume, state.unit)} used
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <progress className={`progress flex-1 h-2 ${stats.overWeight ? 'progress-error' : 'progress-success'}`} value={Math.min(100, stats.weightPercent)} max="100" />
-                <progress className={`progress flex-1 h-2 ${stats.overVolume ? 'progress-error' : 'progress-info'}`} value={Math.min(100, stats.volumePercent)} max="100" />
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {assignedItems.map(si => (
-                  <span key={si.itemId} className="badge badge-ghost badge-xs">
-                    {packing.catalog.get(si.itemId)?.name ?? si.itemId}
-                    {si.qty > 1 && <span className="opacity-70 ml-1">×{si.qty}</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )
-        })}
+      {/* Per-bag breakdown — each bag opens up to show what's inside, legibly */}
+      <div ref={barsRef} className="space-y-3">
+        <p className="label-caps text-base-content/60">What's in each bag</p>
+        {state.bags.map((bag, i) => (
+          <BagContents
+            key={bag.id}
+            bag={bag}
+            stats={packing.bagStats[bag.id]}
+            items={state.selectedItems.filter(item => item.bagId === bag.id && !item.worn)}
+            catalog={packing.catalog}
+            unit={state.unit}
+            defaultOpen={i === 0}
+          />
+        ))}
       </div>
 
       {/* Weight distribution */}

@@ -15,6 +15,7 @@ interface GearRowProps {
   onAssign: (bagId: string | null) => void
   onToggleWorn: () => void
   onToggleConsumable: () => void
+  onToggleToBuy: () => void
   onRemoveCustom: () => void
 }
 
@@ -24,7 +25,7 @@ function bagLabel(bag: Bag): string {
 
 export function GearRow({
   spec, selected, bags, essential, unnecessary, eventName, unit,
-  onToggle, onQty, onAssign, onToggleWorn, onToggleConsumable, onRemoveCustom,
+  onToggle, onQty, onAssign, onToggleWorn, onToggleConsumable, onToggleToBuy, onRemoveCustom,
 }: GearRowProps) {
   const weightRange = spec.weight.min === spec.weight.max
     ? formatItemWeight(spec.weight.min, unit)
@@ -36,6 +37,7 @@ export function GearRow({
   const qty = selected?.qty ?? 1
   const worn = selected?.worn ?? false
   const consumable = selected?.consumable ?? false
+  const toBuy = selected?.toBuy ?? false
   const custom = isCustomItem(spec.id)
   const noVolume = custom && spec.volume.max === 0
 
@@ -136,6 +138,15 @@ export function GearRow({
             className={`btn btn-xs min-h-[32px] ${consumable ? 'btn-secondary' : 'btn-ghost border border-base-300'}`}
           >
             {consumable ? '🍫 Eat/drink' : 'Eat/drink'}
+          </button>
+
+          <button
+            onClick={onToggleToBuy}
+            aria-pressed={toBuy}
+            title="You don't own this yet — it goes on the shopping list of your checklist"
+            className={`btn btn-xs min-h-[32px] ${toBuy ? 'btn-accent' : 'btn-ghost border border-base-300'}`}
+          >
+            {toBuy ? '🛒 To buy' : 'To buy'}
           </button>
 
           {worn ? (

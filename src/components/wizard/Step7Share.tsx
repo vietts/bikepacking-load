@@ -165,25 +165,39 @@ export function Step7Share() {
           )}
         </div>
 
-        {/* Shopping notes — blank lines to fill in by hand before the trip */}
-        <div className="break-inside-avoid">
-          <div className="flex items-baseline justify-between border-b border-base-300 pb-1.5 mb-3">
-            <h3 className="heading-md text-sm">To buy</h3>
-            <span className="text-small text-base-content/60 shrink-0">gear still to pick up</span>
-          </div>
-          <div className="space-y-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0" />
-                <span className="flex-1 border-b border-base-content/30" />
+        {/* Shopping list — items flagged "to buy" in the gear step, plus blank
+            lines for whatever comes to mind with the printout in hand */}
+        {(() => {
+          const toBuyItems = byBulk(state.selectedItems.filter(i => i.toBuy))
+          const blankLines = toBuyItems.length > 0 ? 3 : 5
+          return (
+            <div className="break-inside-avoid">
+              <div className="flex items-baseline justify-between border-b border-base-300 pb-1.5 mb-3">
+                <h3 className="heading-md text-sm">To buy</h3>
+                <span className="text-small text-base-content/60 shrink-0">gear still to pick up</span>
               </div>
-            ))}
-          </div>
-        </div>
+              {toBuyItems.length > 0 && (
+                <ul className="space-y-1.5 mb-4">
+                  {toBuyItems.map(si => (
+                    <ChecklistRow key={si.itemId} name={packing.catalog.get(si.itemId)?.name ?? si.itemId} qty={si.qty} grams={si.weight} unit={state.unit} />
+                  ))}
+                </ul>
+              )}
+              <div className="space-y-5">
+                {Array.from({ length: blankLines }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span aria-hidden="true" className="print-checkbox w-4 h-4 border-2 border-base-content/50 rounded-[4px] shrink-0" />
+                    <span className="flex-1 border-b border-base-content/30" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
-      {/* Actions */}
-      <div className="space-y-3 print:hidden">
+      {/* Actions — extra breathing room between the checklist card and the share tools */}
+      <div className="space-y-3 pt-4 print:hidden">
         <div className="join w-full">
           <input type="text" readOnly value={shareUrl}
             className="input input-bordered join-item flex-1 text-small text-base-content/60 truncate" />

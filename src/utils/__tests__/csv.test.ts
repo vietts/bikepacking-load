@@ -114,6 +114,19 @@ describe('toCSV → parseCSV round trip', () => {
     expect(parseCSV(csv).rows[0].name).toBe('Tools, spares and bits')
   })
 
+  it('carries the to-buy flag through export and re-import', () => {
+    const imported = rowsToState(parseCSV(LIGHTERPACK_CSV).rows)
+    imported.selectedItems[1].toBuy = true
+
+    const original = stateWith(imported.customItems, imported.selectedItems)
+    const reparsed = parseCSV(toCSV(original, buildCatalog(original.customItems)))
+
+    expect(reparsed.rows.map(r => r.toBuy ?? false)).toEqual([false, true, false, false])
+    const { selectedItems } = rowsToState(reparsed.rows)
+    expect(selectedItems[1].toBuy).toBe(true)
+    expect(selectedItems[0].toBuy).toBeUndefined()
+  })
+
   it('carries the volume our export adds but LighterPack has no column for', () => {
     const { customItems, selectedItems } = rowsToState([{
       name: 'Tent', category: 'sleep', sourceCategory: 'Sleep', description: '',

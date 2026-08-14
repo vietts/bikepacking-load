@@ -10,7 +10,7 @@ import { newCustomItemId, type Catalog } from './catalog'
  */
 export const CSV_HEADER = [
   'Item Name', 'Category', 'Description', 'Qty', 'Weight', 'Unit',
-  'Bag', 'Volume (L)', 'Worn', 'Consumable',
+  'Bag', 'Volume (L)', 'Worn', 'Consumable', 'To buy',
 ] as const
 
 /** LighterPack's own unit aliases, so a hand-edited file still imports. */
@@ -64,6 +64,7 @@ export function toCSV(state: WizardState, catalog: Catalog): string {
       item.volume,
       item.worn ? 'yes' : '',
       item.consumable ? 'yes' : '',
+      item.toBuy ? 'yes' : '',
     ].map(escapeCell).join(',')
   })
 
@@ -112,6 +113,7 @@ export interface ImportRow {
   volume: number
   worn: boolean
   consumable: boolean
+  toBuy?: boolean
 }
 
 export interface ParseResult {
@@ -152,6 +154,7 @@ export function parseCSV(text: string): ParseResult {
       volume: Number.isFinite(volume) && volume > 0 ? volume : 0,
       worn: flag(row[8]) || /^worn$/i.test((row[6] ?? '').trim()),
       consumable: flag(row[9]),
+      toBuy: flag(row[10]),
     })
   }
 
@@ -184,6 +187,7 @@ export function rowsToState(rows: ImportRow[]): { customItems: ItemSpec[]; selec
       qty: row.qty,
       worn: row.worn || undefined,
       consumable: row.consumable || undefined,
+      toBuy: row.toBuy || undefined,
     })
   }
 
