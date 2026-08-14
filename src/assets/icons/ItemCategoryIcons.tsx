@@ -78,6 +78,15 @@ export function DocsIcon({ className, size = 20 }: IconProps) {
   )
 }
 
+export function OtherIcon({ className, size = 20 }: IconProps) {
+  return (
+    <svg {...iconProps(size)} className={className}>
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" opacity={0.4} />
+    </svg>
+  )
+}
+
 export const itemCategoryIcons: Record<ItemCategory, ComponentType<IconProps>> = {
   clothes: ClothesIcon,
   sleep: SleepIcon,
@@ -86,4 +95,5 @@ export const itemCategoryIcons: Record<ItemCategory, ComponentType<IconProps>> =
   hygiene: HygieneIcon,
   food: FoodIcon,
   docs: DocsIcon,
+  other: OtherIcon,
 }
