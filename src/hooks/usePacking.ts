@@ -148,8 +148,8 @@ export function getItemPackingFactor(itemId: string): number {
  * openingDiameter. null = opening not girth-constrained (open platform).
  */
 const DEFAULT_OPENING_DIAMETER: Record<BagType, number | null> = {
-  handlebar: 15,
-  saddle: 14,
+  handlebar: 18,
+  saddle: 17,
   fork: 14,
   frame: 6,
   top_tube: 5,
