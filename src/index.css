@@ -148,11 +148,12 @@ body {
   box-shadow: 0 8px 24px oklch(0% 0 0 / 0.06), 0 2px 8px oklch(0% 0 0 / 0.04);
 }
 
-/* Card press (selected state) */
+/* Card press (selected state) — must survive next to a warm beige background,
+   so the fill is stronger and a ring doubles the border. */
 .card-selected {
-  border-color: oklch(32% 0.09 150) !important;
-  background: oklch(32% 0.09 150 / 0.06) !important;
-  box-shadow: 0 0 0 3px oklch(32% 0.09 150 / 0.12), 0 2px 8px oklch(0% 0 0 / 0.04);
+  border: 2px solid oklch(32% 0.09 150) !important;
+  background: oklch(32% 0.09 150 / 0.14) !important;
+  box-shadow: 0 0 0 3px oklch(32% 0.09 150 / 0.22), 0 2px 8px oklch(0% 0 0 / 0.04);
 }
 
 /* Badge pulse for RECOMMENDED */

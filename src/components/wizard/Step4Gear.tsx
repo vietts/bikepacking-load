@@ -7,9 +7,12 @@ import type { ItemSpec, ItemCategory } from '../../types'
 import gsap from 'gsap'
 
 export function Step4Gear() {
-  const { state, dispatch } = useWizard()
+  const { state, dispatch, nextStep } = useWizard()
   const [activeCategory, setActiveCategory] = useState<ItemCategory>('clothes')
   const [query, setQuery] = useState('')
+  // Categories the rider has already looked at — the guided "Next" walk marks
+  // them off so it's clear the whole list has been covered, not just one tab.
+  const [visited, setVisited] = useState<Set<ItemCategory>>(() => new Set(['clothes']))
   const itemsRef = useRef<HTMLDivElement>(null)
 
   // Hand-added and imported gear sits alongside the catalog, newest first so it's
@@ -50,6 +53,25 @@ export function Step4Gear() {
   const essentialCount = state.event
     ? state.event.essentialItems.filter(id => selectedById.has(id)).length
     : 0
+  const essentialTotal = state.event?.essentialItems.length ?? 0
+
+  // The guided walk only visits categories that actually contain items.
+  const categories = CATEGORY_ORDER.filter(cat => allItems.some(i => i.category === cat))
+  const categoryIndex = categories.indexOf(activeCategory)
+  const nextCategory = categoryIndex >= 0 && categoryIndex < categories.length - 1
+    ? categories[categoryIndex + 1]
+    : null
+
+  function selectCategory(cat: ItemCategory) {
+    setActiveCategory(cat)
+    setVisited(prev => prev.has(cat) ? prev : new Set(prev).add(cat))
+  }
+
+  function goToCategory(cat: ItemCategory) {
+    selectCategory(cat)
+    setQuery('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
     <div className="space-y-6">
@@ -61,6 +83,26 @@ export function Step4Gear() {
           already checked. Next you'll pack each bag, one at a time.
         </p>
       </div>
+
+      {/* Essentials completion — one glance answers "am I missing anything vital?" */}
+      {state.event && essentialTotal > 0 && (
+        <div className={`card p-4 border-2 ${
+          essentialCount === essentialTotal ? 'border-success/30 bg-success/5' : 'card-border bg-base-100'
+        }`}>
+          <div className="flex justify-between items-baseline mb-2">
+            <span className={`text-small font-semibold ${essentialCount === essentialTotal ? 'text-success' : 'text-base-content/70'}`}>
+              {essentialCount === essentialTotal ? '✓ All essentials covered' : `Essentials for ${state.event.name}`}
+            </span>
+            <span className={`text-small tabular-nums font-semibold ${essentialCount === essentialTotal ? 'text-success' : 'text-base-content/60'}`}>
+              {essentialCount}/{essentialTotal}
+            </span>
+          </div>
+          <progress
+            className={`progress w-full h-2.5 ${essentialCount === essentialTotal ? 'progress-success' : 'progress-primary'}`}
+            value={essentialCount} max={essentialTotal}
+          />
+        </div>
+      )}
 
       <div className="lg:flex lg:gap-8">
         {/* Left: Gear list */}
@@ -74,16 +116,17 @@ export function Step4Gear() {
             className="input input-bordered w-full"
           />
 
-          {/* Category tabs — hidden while searching, so results aren't filtered twice */}
+          {/* Category tabs — hidden while searching, so results aren't filtered twice.
+              Visited categories get a check so the walk-through reads as a checklist. */}
           {!search && (
             <div className="flex flex-wrap gap-1.5 pb-1">
-              {CATEGORY_ORDER.map(cat => {
+              {categories.map(cat => {
                 const count = allItems.filter(i => i.category === cat && selectedById.has(i.id)).length
-                const total = allItems.filter(i => i.category === cat).length
-                if (total === 0) return null
+                const seen = visited.has(cat) && cat !== activeCategory
                 return (
-                  <button key={cat} onClick={() => setActiveCategory(cat)}
+                  <button key={cat} onClick={() => selectCategory(cat)}
                     className={`btn btn-sm ${activeCategory === cat ? 'btn-primary' : 'btn-ghost bg-base-100'}`}>
+                    {seen && <span className="text-success -mr-0.5">✓</span>}
                     {CATEGORY_LABELS[cat]}
                     {count > 0 && <span className="opacity-60 ml-0.5">({count})</span>}
                   </button>
@@ -108,6 +151,7 @@ export function Step4Gear() {
                 onAssign={() => {}}
                 onToggleWorn={() => dispatch({ type: 'TOGGLE_WORN', itemId: item.id })}
                 onToggleConsumable={() => dispatch({ type: 'TOGGLE_CONSUMABLE', itemId: item.id })}
+                onToggleToBuy={() => dispatch({ type: 'TOGGLE_TO_BUY', itemId: item.id })}
                 onRemoveCustom={() => dispatch({ type: 'REMOVE_CUSTOM_ITEM', itemId: item.id })}
               />
             ))}
@@ -123,9 +167,33 @@ export function Step4Gear() {
             onAdd={item => {
               dispatch({ type: 'ADD_CUSTOM_ITEM', item, select: true })
               setQuery('')
-              setActiveCategory(item.category)
+              selectCategory(item.category)
             }}
           />
+
+          {/* Guided walk: one big CTA moves category by category, so "did I cover
+              everything?" answers itself. The wizard-level Continue is hidden here. */}
+          {!search && (
+            <div className="pt-2 space-y-2">
+              {nextCategory ? (
+                <button onClick={() => goToCategory(nextCategory)} className="btn btn-primary btn-lg w-full">
+                  Next: {CATEGORY_LABELS[nextCategory]} →
+                </button>
+              ) : (
+                <button
+                  onClick={nextStep}
+                  disabled={state.selectedItems.length === 0}
+                  className="btn btn-primary btn-lg w-full"
+                >
+                  Continue to packing →
+                </button>
+              )}
+              <p className="text-small text-base-content/40 text-center">
+                Category {categoryIndex + 1} of {categories.length}
+                {nextCategory && ' · you can also jump around with the tabs above'}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Right: running summary */}
@@ -149,15 +217,6 @@ export function Step4Gear() {
               </div>
             )}
           </div>
-
-          {state.event && (
-            <div className="card card-border bg-base-100 p-4">
-              <div className="text-small text-base-content/50">
-                <span className="font-semibold text-success">{essentialCount}/{state.event.essentialItems.length}</span> essentials
-                for {state.event.name} in your list
-              </div>
-            </div>
-          )}
 
           <div className="bg-primary/8 border border-primary/15 rounded-xl p-4">
             <p className="text-small text-primary/80">

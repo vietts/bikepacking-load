@@ -8,6 +8,13 @@ import gsap from 'gsap'
 
 const bagPresets = bagsData as BagPreset[]
 
+// Bags that fight for the same physical space on the bike: a rear rack sits
+// exactly where a saddle bag swings, so you ride with one or the other.
+const EXCLUSIVE_WITH: Partial<Record<BagType, BagType>> = {
+  saddle: 'rear_rack',
+  rear_rack: 'saddle',
+}
+
 const bagTypes: { type: BagType; label: string; description: string }[] = [
   { type: 'handlebar', label: 'Handlebar', description: 'Front mount. Good for light, bulky items.' },
   { type: 'frame', label: 'Frame', description: 'Center triangle. Best position for heavy items.' },
@@ -102,7 +109,10 @@ export function Step3Bags() {
       <div ref={gridRef} className="space-y-3">
         {bagTypes.map(({ type, label, description }) => {
           const currentBag = bagByType.get(type)
-          const isExpanded = expandedType === type
+          const conflictType = EXCLUSIVE_WITH[type]
+          const conflictBag = conflictType && !currentBag ? bagByType.get(conflictType) : undefined
+          const conflictLabel = conflictType ? bagTypes.find(t => t.type === conflictType)?.label : undefined
+          const isExpanded = expandedType === type && !conflictBag
           const presetsForType = bagPresets.filter(p => p.type === type)
           const sorted = [...presetsForType].sort((a, b) => {
             if (a.recommended && !b.recommended) return -1
@@ -114,13 +124,22 @@ export function Step3Bags() {
             <div key={type} className={`
               card overflow-hidden transition-all duration-300
               ${currentBag ? 'card-selected' : isExpanded ? 'border-2 border-primary/30 bg-base-100' : 'card-border bg-base-100'}
+              ${conflictBag ? 'opacity-60' : ''}
             `}>
-              <button onClick={() => toggleExpand(type)}
-                className="w-full p-5 flex items-center gap-4 text-left hover:bg-base-200/30 transition-colors">
+              <button onClick={() => !conflictBag && toggleExpand(type)}
+                aria-disabled={!!conflictBag}
+                className={`w-full p-5 flex items-center gap-4 text-left transition-colors ${
+                  conflictBag ? 'cursor-not-allowed' : 'hover:bg-base-200/30'
+                }`}>
                 {(() => { const Icon = bagIcons[type]; return <Icon className="text-base-content/50" /> })()}
                 <div className="flex-1 min-w-0">
                   <div className="heading-md">{label}</div>
-                  {!currentBag && <div className="text-small text-base-content/60 mt-0.5">{description}</div>}
+                  {!currentBag && !conflictBag && <div className="text-small text-base-content/60 mt-0.5">{description}</div>}
+                  {conflictBag && (
+                    <div className="text-small text-warning font-medium mt-0.5">
+                      Uses the same rear space as your {conflictLabel} bag — it's one or the other.
+                    </div>
+                  )}
                   {currentBag && (
                     <div className="text-small text-primary font-medium mt-0.5">
                       {currentBag.brand && `${currentBag.brand} · `}{currentBag.volume}L · max {currentBag.maxWeight}kg
@@ -130,11 +149,24 @@ export function Step3Bags() {
                   )}
                 </div>
                 {currentBag ? (
-                  <span className="badge badge-primary badge-sm">✓</span>
+                  <span className="w-7 h-7 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-bold shrink-0">✓</span>
+                ) : conflictBag ? (
+                  <span className="text-small text-base-content/40 font-medium">Not compatible</span>
                 ) : (
                   <span className="text-small text-base-content/60 font-medium">{isExpanded ? '▲' : '+ Add'}</span>
                 )}
               </button>
+
+              {conflictBag && conflictType && (
+                <div className="px-5 pb-4">
+                  <button
+                    onClick={() => { removeBag(conflictType); setExpandedType(type) }}
+                    className="link link-primary text-small"
+                  >
+                    Use a {label.toLowerCase()} instead (removes the {conflictLabel?.toLowerCase()} bag)
+                  </button>
+                </div>
+              )}
 
               {currentBag && !isExpanded && (
                 <div className="px-5 pb-4 flex items-center gap-3">
@@ -159,11 +191,11 @@ export function Step3Bags() {
                       return (
                         <button key={preset.id} onClick={() => selectPreset(preset)}
                           className={`card p-3.5 text-left transition-all cursor-pointer relative card-hover ${
-                            selected ? 'card-selected'
-                            : preset.recommended ? 'border-2 border-accent/40 bg-accent/5'
-                            : 'card-border bg-base-100'
+                            selected ? 'card-selected' : 'card-border bg-base-100'
                           }`}>
-                          {selected && <span className="absolute top-2.5 right-2.5 badge badge-primary badge-xs">✓</span>}
+                          {selected && (
+                            <span className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs font-bold">✓</span>
+                          )}
                           {!selected && preset.recommended && (
                             <span className="absolute top-2.5 right-2.5 badge badge-accent badge-xs badge-pulse text-[9px]">
                               RECOMMENDED

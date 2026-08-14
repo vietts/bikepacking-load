@@ -21,6 +21,7 @@ type WizardAction =
   | { type: 'SET_QTY'; itemId: string; qty: number }
   | { type: 'TOGGLE_WORN'; itemId: string }
   | { type: 'TOGGLE_CONSUMABLE'; itemId: string }
+  | { type: 'TOGGLE_TO_BUY'; itemId: string }
   | { type: 'UPDATE_ITEM_WEIGHT'; itemId: string; weight: number }
   | { type: 'UPDATE_ITEM_VOLUME'; itemId: string; volume: number }
   | { type: 'ADD_CUSTOM_ITEM'; item: ItemSpec; select: boolean }
@@ -143,6 +144,13 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         selectedItems: state.selectedItems.map(i =>
           i.itemId === action.itemId ? { ...i, consumable: !i.consumable } : i
+        ),
+      }
+    case 'TOGGLE_TO_BUY':
+      return {
+        ...state,
+        selectedItems: state.selectedItems.map(i =>
+          i.itemId === action.itemId ? { ...i, toBuy: !i.toBuy } : i
         ),
       }
     case 'ADD_CUSTOM_ITEM': {

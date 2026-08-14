@@ -28,7 +28,7 @@ const bagHints: Record<BagType, string> = {
 }
 
 export function Step5PackBags() {
-  const { state, dispatch } = useWizard()
+  const { state, dispatch, nextStep } = useWizard()
   const packing = usePacking(state)
   const [bagIndex, setBagIndex] = useState(0)
   const focusRef = useRef<HTMLDivElement>(null)
@@ -146,6 +146,11 @@ export function Step5PackBags() {
     dispatch({ type: 'ASSIGN_ITEM', itemId: item.id, bagId: bag!.id })
   }
 
+  function goToBag(index: number) {
+    setBagIndex(Math.max(0, Math.min(bags.length - 1, index)))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -193,7 +198,106 @@ export function Step5PackBags() {
           )
         })()}
 
-        {/* What still needs a home + ideas — above the focused bag */}
+        {/* Focused bag — first thing you see, with what's already inside it */}
+        <div className={`card p-5 space-y-4 border-2 ${
+          isOverloaded ? 'border-error bg-error/5' : isNearLimit ? 'border-warning bg-warning/5' : 'card-border bg-base-100'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span ref={bagTargetRef} className="shrink-0">
+              {(() => { const Icon = bagIcons[bag.type]; return <Icon className="text-base-content/60" /> })()}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="heading-md">
+                {bagLabels[bag.type]}
+                {bag.brand && <span className="text-base-content/35 font-normal"> · {bag.brand}{bag.model ? ` ${bag.model}` : ''}</span>}
+              </div>
+              <div className="text-small text-base-content/40">{bag.volume}L · max {bag.maxWeight}kg</div>
+            </div>
+            <span className="text-small text-base-content/35 font-medium">Bag {bagIndex + 1} of {bags.length}</span>
+          </div>
+
+          <p className="text-small text-base-content/50 italic">{bagHints[bag.type]}</p>
+
+          {stats && (
+            <div className="space-y-2.5">
+              <div>
+                <div className="flex justify-between text-[10px] mb-1">
+                  <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
+                    Weight {stats.overWeight && '— over limit!'}
+                  </span>
+                  <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
+                    {formatLoad(stats.totalWeight, state.unit)} / {formatLoad(bag.maxWeight * 1000, state.unit)}
+                  </span>
+                </div>
+                <progress className={`progress w-full h-2 ${stats.overWeight ? 'progress-error' : stats.weightPercent > 80 ? 'progress-warning' : 'progress-success'}`}
+                  value={Math.min(100, stats.weightPercent)} max="100" />
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] mb-1">
+                  <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
+                    Space used {stats.overVolume && "— won't fit!"}
+                  </span>
+                  <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
+                    {formatVolume(stats.effectiveVolume, state.unit)} / {formatVolume(bag.volume, state.unit)}
+                  </span>
+                </div>
+                <progress className={`progress w-full h-2 ${stats.overVolume ? 'progress-error' : stats.volumePercent > 90 ? 'progress-warning' : 'progress-info'}`}
+                  value={Math.min(100, stats.volumePercent)} max="100" />
+              </div>
+            </div>
+          )}
+
+          {isOverloaded && stats && (
+            <div className="bg-error/10 rounded-lg px-3 py-2 text-small text-error">
+              {stats.overWeight && stats.overVolume
+                ? `Too heavy and too full. Move ${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} and ${formatVolume(stats.effectiveVolume - bag.volume, state.unit)} worth of items to another bag.`
+                : stats.overWeight
+                  ? `${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} over the limit. Move heavy items to ${bag.type === 'handlebar' ? 'the frame bag' : 'another bag'}.`
+                  : `These items take up ${formatVolume(stats.effectiveVolume, state.unit)} but the bag only fits ${formatVolume(bag.volume, state.unit)}. Try swapping for softer gear or move something out.`}
+            </div>
+          )}
+
+          {/* Items in this bag */}
+          <div className="space-y-1.5">
+            <p className="label-caps text-base-content/40">In this bag</p>
+            {inBag.length > 0 && (
+              <p className="text-small text-base-content/45">
+                Already packed for you — this is where these usually ride best. Move anything you like.
+              </p>
+            )}
+            {inBag.length === 0 ? (
+              <p className="text-small text-base-content/25 italic">Empty — add something from below.</p>
+            ) : inBag.map(si => {
+              const spec = catalog.get(si.itemId)
+              const Icon = spec ? itemCategoryIcons[spec.category] : null
+              return (
+                <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
+                  {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
+                  <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                    {spec?.name ?? si.itemId}
+                    {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
+                  </span>
+                  <span className="text-small text-base-content/35 shrink-0">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
+                  <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
+                    className="select select-xs select-bordered shrink-0 w-32"
+                    aria-label={`Move ${spec?.name ?? si.itemId}`}>
+                    {bags.map(b => {
+                      const canFit = b.id === bag.id || fitsGirth(si.itemId, b, catalog)
+                      return (
+                        <option key={b.id} value={b.id} disabled={!canFit}>
+                          {b.id === bag.id ? '✓ ' : '→ '}{bagLabels[b.type]}{!canFit ? " — won't fit" : ''}
+                        </option>
+                      )
+                    })}
+                    <option value="">Set aside</option>
+                  </select>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* What still needs a home — after you've seen what's already packed */}
         {unplaced.length > 0 && (
           <div className="card card-border bg-base-100 p-4 space-y-3">
             <p className="label-caps text-base-content/40">
@@ -267,9 +371,10 @@ export function Step5PackBags() {
           </div>
         )}
 
+        {/* Last call — things riders usually put in this bag that aren't on the list at all */}
         {catalogSuggestions.length > 0 && (
           <div className="card card-border bg-base-100 p-4 space-y-2">
-            <p className="label-caps text-base-content/40">Ideas for this bag</p>
+            <p className="label-caps text-base-content/40">Sure you're not forgetting anything?</p>
             <p className="text-[11px] text-base-content/35 -mt-1">Not on your list yet — tap to add.</p>
             <div className="flex flex-wrap gap-1.5">
               {catalogSuggestions.map(item => {
@@ -286,119 +391,24 @@ export function Step5PackBags() {
           </div>
         )}
 
-        {/* Focused bag */}
-        <div className="space-y-4">
-          <div className={`card p-5 space-y-4 border-2 ${
-            isOverloaded ? 'border-error bg-error/5' : isNearLimit ? 'border-warning bg-warning/5' : 'card-border bg-base-100'
-          }`}>
-            <div className="flex items-center gap-3">
-              <span ref={bagTargetRef} className="shrink-0">
-                {(() => { const Icon = bagIcons[bag.type]; return <Icon className="text-base-content/60" /> })()}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="heading-md">
-                  {bagLabels[bag.type]}
-                  {bag.brand && <span className="text-base-content/35 font-normal"> · {bag.brand}{bag.model ? ` ${bag.model}` : ''}</span>}
-                </div>
-                <div className="text-small text-base-content/40">{bag.volume}L · max {bag.maxWeight}kg</div>
-              </div>
-              <span className="text-small text-base-content/35 font-medium">Bag {bagIndex + 1} of {bags.length}</span>
-            </div>
-
-            <p className="text-small text-base-content/50 italic">{bagHints[bag.type]}</p>
-
-            {stats && (
-              <div className="space-y-2.5">
-                <div>
-                  <div className="flex justify-between text-[10px] mb-1">
-                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
-                      Weight {stats.overWeight && '— over limit!'}
-                    </span>
-                    <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
-                      {formatLoad(stats.totalWeight, state.unit)} / {formatLoad(bag.maxWeight * 1000, state.unit)}
-                    </span>
-                  </div>
-                  <progress className={`progress w-full h-2 ${stats.overWeight ? 'progress-error' : stats.weightPercent > 80 ? 'progress-warning' : 'progress-success'}`}
-                    value={Math.min(100, stats.weightPercent)} max="100" />
-                </div>
-                <div>
-                  <div className="flex justify-between text-[10px] mb-1">
-                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
-                      Space used {stats.overVolume && "— won't fit!"}
-                    </span>
-                    <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
-                      {formatVolume(stats.effectiveVolume, state.unit)} / {formatVolume(bag.volume, state.unit)}
-                    </span>
-                  </div>
-                  <progress className={`progress w-full h-2 ${stats.overVolume ? 'progress-error' : stats.volumePercent > 90 ? 'progress-warning' : 'progress-info'}`}
-                    value={Math.min(100, stats.volumePercent)} max="100" />
-                </div>
-              </div>
-            )}
-
-            {isOverloaded && stats && (
-              <div className="bg-error/10 rounded-lg px-3 py-2 text-small text-error">
-                {stats.overWeight && stats.overVolume
-                  ? `Too heavy and too full. Move ${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} and ${formatVolume(stats.effectiveVolume - bag.volume, state.unit)} worth of items to another bag.`
-                  : stats.overWeight
-                    ? `${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} over the limit. Move heavy items to ${bag.type === 'handlebar' ? 'the frame bag' : 'another bag'}.`
-                    : `These items take up ${formatVolume(stats.effectiveVolume, state.unit)} but the bag only fits ${formatVolume(bag.volume, state.unit)}. Try swapping for softer gear or move something out.`}
-              </div>
-            )}
-
-            {/* Items in this bag */}
-            <div className="space-y-1.5">
-              <p className="label-caps text-base-content/40">In this bag</p>
-              {inBag.length === 0 ? (
-                <p className="text-small text-base-content/25 italic">Empty — add something from below.</p>
-              ) : inBag.map(si => {
-                const spec = catalog.get(si.itemId)
-                const Icon = spec ? itemCategoryIcons[spec.category] : null
-                return (
-                  <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
-                    {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
-                    <span className="text-sm font-medium flex-1 min-w-0 truncate">
-                      {spec?.name ?? si.itemId}
-                      {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
-                    </span>
-                    <span className="text-small text-base-content/35 shrink-0">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
-                    <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
-                      className="select select-xs select-bordered shrink-0 w-32"
-                      aria-label={`Move ${spec?.name ?? si.itemId}`}>
-                      {bags.map(b => {
-                        const canFit = b.id === bag.id || fitsGirth(si.itemId, b, catalog)
-                        return (
-                          <option key={b.id} value={b.id} disabled={!canFit}>
-                            {b.id === bag.id ? '✓ ' : '→ '}{bagLabels[b.type]}{!canFit ? " — won't fit" : ''}
-                          </option>
-                        )
-                      })}
-                      <option value="">Set aside</option>
-                    </select>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Bag-to-bag navigation */}
-          <div className="flex justify-between items-center">
-            <button onClick={() => setBagIndex(i => Math.max(0, i - 1))}
-              disabled={bagIndex === 0}
-              className="btn btn-ghost btn-sm gap-1 disabled:opacity-0">
-              ← {bagIndex > 0 ? bagLabels[bags[bagIndex - 1].type] : ''}
+        {/* Bag-to-bag navigation — one big unmistakable CTA */}
+        <div className="space-y-2 pt-2">
+          {!isLastBag ? (
+            <button onClick={() => goToBag(bagIndex + 1)} className="btn btn-primary btn-lg w-full">
+              Next bag: {bagLabels[bags[bagIndex + 1].type]} →
             </button>
-            {!isLastBag ? (
-              <button onClick={() => setBagIndex(i => Math.min(bags.length - 1, i + 1))}
-                className="btn btn-primary btn-sm gap-1">
-                Next bag: {bagLabels[bags[bagIndex + 1].type]} →
+          ) : (
+            <button onClick={nextStep} className="btn btn-primary btn-lg w-full">
+              Review your load →
+            </button>
+          )}
+          {bagIndex > 0 && (
+            <div className="text-center">
+              <button onClick={() => goToBag(bagIndex - 1)} className="link text-small text-base-content/50 no-underline hover:underline">
+                ← Back to {bagLabels[bags[bagIndex - 1].type]}
               </button>
-            ) : (
-              <span className="text-small text-base-content/40">
-                Last bag — hit <span className="font-semibold">Review list</span> below to check your load.
-              </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Total so far */}
