@@ -60,7 +60,7 @@ function normalizeCustomItem(raw: unknown): ItemSpec | null {
   }
 }
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 
 export function normalizeState(raw: unknown): WizardState | null {
   if (!raw || typeof raw !== 'object') return null

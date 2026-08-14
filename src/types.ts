@@ -12,6 +12,7 @@ export interface BikeSpec {
 export interface Bike {
   type: BikeType
   size: BikeSize
+  model?: string // free text, e.g. "Canyon Grizl CF SL 8"
   weight: number
   frameBagMaxVolume: number
 }
@@ -46,6 +47,7 @@ export interface BagPreset {
   bagWeight?: number // grams, weight of the bag itself
   waterproof?: boolean | string
   closure?: string
+  openingDiameter?: number // cm, max diameter of the opening/roll
   recommended?: boolean
   basDiscount?: boolean
 }
@@ -59,6 +61,7 @@ export interface Bag {
   brand?: string
   model?: string
   bagWeight?: number // grams
+  openingDiameter?: number // cm, max diameter of the opening/roll
   recommended?: boolean
   items: string[] // assigned selected item IDs
 }
@@ -77,6 +80,7 @@ export interface ItemSpec {
   priority: ItemPriority
   shape: 'rectangular' | 'cylindrical'
   rigidity: 'rigid' | 'soft'
+  packedDiameter?: number // cm, compressed diameter — only for bulky soft items
   preferredBag?: BagType
   note?: string
   sponsorLink?: string

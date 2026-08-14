@@ -40,10 +40,16 @@ export function Step1Bike() {
       bike: {
         type: bikeSpec.type,
         size,
+        model: state.bike?.model,
         weight: bikeSpec.defaultWeight,
         frameBagMaxVolume: bikeSpec.frameBagMaxVolume[size],
       },
     })
+  }
+
+  function setModel(model: string) {
+    if (!state.bike) return
+    dispatch({ type: 'SET_BIKE', bike: { ...state.bike, model: model || undefined } })
   }
 
   function handleTypeSelect(bikeSpec: BikeSpec) {
@@ -109,6 +115,20 @@ export function Step1Bike() {
               Frame bag max volume for {selectedType} {selectedSize}: ~{state.bike.frameBagMaxVolume}L
             </p>
           )}
+
+          <div className="space-y-1.5">
+            <label className="label-caps text-base-content/50" htmlFor="bike-model">
+              Bike model <span className="normal-case font-normal text-base-content/30">(optional)</span>
+            </label>
+            <input
+              id="bike-model"
+              type="text"
+              value={state.bike?.model ?? ''}
+              onChange={e => setModel(e.target.value)}
+              placeholder="e.g. Canyon Grizl, Specialized Diverge…"
+              className="input input-bordered w-full"
+            />
+          </div>
         </div>
       )}
 

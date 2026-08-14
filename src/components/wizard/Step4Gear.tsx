@@ -1,18 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking } from '../../hooks/usePacking'
 import { BUILTIN_ITEMS, CATEGORY_LABELS, CATEGORY_ORDER } from '../../utils/catalog'
-import { countUnassigned } from '../../utils/autopack'
-import { formatLoad } from '../../utils/units'
 import { GearRow } from '../packing/GearRow'
-import { BagPanel } from '../packing/BagPanel'
 import { AddCustomItem } from '../packing/AddCustomItem'
 import type { ItemSpec, ItemCategory } from '../../types'
 import gsap from 'gsap'
 
-export function Step4Pack() {
+export function Step4Gear() {
   const { state, dispatch } = useWizard()
-  const packing = usePacking(state)
   const [activeCategory, setActiveCategory] = useState<ItemCategory>('clothes')
   const [query, setQuery] = useState('')
   const itemsRef = useRef<HTMLDivElement>(null)
@@ -26,13 +21,16 @@ export function Step4Pack() {
 
   const search = query.trim().toLowerCase()
   // Searching spans the whole catalog — with 48+ items plus your own, hunting
-  // through seven tabs to find "pump" is the wrong job for a human.
+  // through category tabs to find "pump" is the wrong job for a human.
   const visibleItems = search
     ? allItems.filter(i => i.name.toLowerCase().includes(search))
     : allItems.filter(i => i.category === activeCategory)
 
   const selectedById = new Map(state.selectedItems.map(i => [i.itemId, i]))
-  const unassignedCount = countUnassigned(state)
+
+  // Assignment to bags happens later, one bag at a time (Step 5) — this list is
+  // purely "what am I bringing", so GearRow never renders a bag-assign control here.
+  const noBags: never[] = []
 
   useEffect(() => {
     if (!itemsRef.current) return
@@ -48,20 +46,19 @@ export function Step4Pack() {
     dispatch({ type: 'TOGGLE_ITEM', itemId: item.id, weight: avgWeight, volume: avgVolume })
   }
 
-  const showWorn = packing.wornWeight >= 50
-  const showConsumable = packing.consumableWeight >= 50
+  const totalWeightKg = state.selectedItems.reduce((s, i) => s + i.weight * i.qty, 0) / 1000
+  const essentialCount = state.event
+    ? state.event.essentialItems.filter(id => selectedById.has(id)).length
+    : 0
 
   return (
     <div className="space-y-6">
       <div>
         <p className="label-caps text-primary mb-2">Step 4</p>
-        <h2 className="heading-xl text-base-content">Pack your gear</h2>
-        <p className="text-body text-base-content/70 mt-3 max-w-lg">
-          {state.event ? (
-            <>We've pre-packed the essentials for <span className="font-semibold text-base-content">{state.event.name}</span> — add or remove anything you like, then assign items to your bags.</>
-          ) : (
-            <>Select items and assign them to your bags.</>
-          )}
+        <h2 className="heading-xl text-base-content">Build your gear list</h2>
+        <p className="text-body text-base-content/60 mt-3 max-w-lg">
+          A first draft, not the final word — essentials for {state.event?.name ?? 'your trip'} are
+          already checked. Next you'll pack each bag, one at a time.
         </p>
       </div>
 
@@ -77,7 +74,7 @@ export function Step4Pack() {
             className="input input-bordered w-full"
           />
 
-          {/* Category tabs — wrap so no category is ever hidden off-screen */}
+          {/* Category tabs — hidden while searching, so results aren't filtered twice */}
           {!search && (
             <div className="flex flex-wrap gap-1.5 pb-1">
               {CATEGORY_ORDER.map(cat => {
@@ -101,14 +98,14 @@ export function Step4Pack() {
                 key={item.id}
                 spec={item}
                 selected={selectedById.get(item.id)}
-                bags={state.bags}
+                bags={noBags}
                 essential={state.event?.essentialItems.includes(item.id) ?? false}
                 unnecessary={state.event?.unnecessaryItems.includes(item.id) ?? false}
                 eventName={state.event?.name}
                 unit={state.unit}
                 onToggle={() => toggleItem(item)}
                 onQty={qty => dispatch({ type: 'SET_QTY', itemId: item.id, qty })}
-                onAssign={bagId => dispatch({ type: 'ASSIGN_ITEM', itemId: item.id, bagId })}
+                onAssign={() => {}}
                 onToggleWorn={() => dispatch({ type: 'TOGGLE_WORN', itemId: item.id })}
                 onToggleConsumable={() => dispatch({ type: 'TOGGLE_CONSUMABLE', itemId: item.id })}
                 onRemoveCustom={() => dispatch({ type: 'REMOVE_CUSTOM_ITEM', itemId: item.id })}
@@ -131,53 +128,41 @@ export function Step4Pack() {
           />
         </div>
 
-        {/* Right: Bag view */}
-        <div className="lg:w-80 mt-8 lg:mt-0 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="label-caps text-base-content/60">Your bags</p>
-            {state.bags.length > 0 && unassignedCount > 0 && (
-              <button
-                onClick={() => dispatch({ type: 'AUTO_ASSIGN' })}
-                className="btn btn-primary btn-xs"
-              >
-                Pack for me ({unassignedCount})
-              </button>
+        {/* Right: running summary */}
+        <div className="lg:w-72 mt-8 lg:mt-0 space-y-3 lg:sticky lg:top-24 self-start">
+          <p className="label-caps text-base-content/40">Your list so far</p>
+
+          <div className="card card-border bg-base-100 p-5 text-center space-y-1">
+            <div className="text-4xl font-bold font-[var(--font-heading)] tracking-tight">
+              {totalWeightKg.toFixed(1)}<span className="text-lg text-base-content/40 ml-1">kg</span>
+            </div>
+            <div className="text-small text-base-content/40">
+              {state.selectedItems.length} item{state.selectedItems.length === 1 ? '' : 's'} selected
+            </div>
+            {state.event && (
+              <div className={`text-small font-medium ${
+                totalWeightKg > state.event.maxAcceptableWeight ? 'text-error'
+                : totalWeightKg > state.event.recommendedWeight.max ? 'text-warning'
+                : 'text-success'
+              }`}>
+                Target: {state.event.recommendedWeight.min}–{state.event.recommendedWeight.max} kg
+              </div>
             )}
           </div>
 
-          {state.bags.map(bag => {
-            const stats = packing.bagStats[bag.id]
-            if (!stats) return null
-            return (
-              <BagPanel
-                key={bag.id}
-                bag={bag}
-                stats={stats}
-                items={state.selectedItems.filter(i => i.bagId === bag.id && !i.worn)}
-                catalog={packing.catalog}
-                unit={state.unit}
-              />
-            )
-          })}
-
-          <div className={`card p-4 text-center border-2 ${
-            packing.isOverMaxWeight ? 'border-error bg-error/8 text-error'
-            : packing.isInRecommendedRange ? 'border-success bg-success/8 text-success'
-            : 'border-warning bg-warning/8 text-warning'
-          }`}>
-            <div className="font-semibold">
-              {formatLoad(packing.onBikeWeight, state.unit)}
-              {state.event && (
-                <span className="font-normal text-small"> / {formatLoad(state.event.recommendedWeight.min * 1000, state.unit)}–{formatLoad(state.event.recommendedWeight.max * 1000, state.unit)} target</span>
-              )}
-            </div>
-            <div className="text-small opacity-70">on the bike</div>
-            {(showWorn || showConsumable) && (
-              <div className="text-small opacity-70 mt-1 border-t border-current/15 pt-1.5 space-y-0.5">
-                {showWorn && <div>+ {formatLoad(packing.wornWeight, state.unit)} you're wearing</div>}
-                {showConsumable && <div>of which {formatLoad(packing.consumableWeight, state.unit)} you'll eat or drink</div>}
+          {state.event && (
+            <div className="card card-border bg-base-100 p-4">
+              <div className="text-small text-base-content/50">
+                <span className="font-semibold text-success">{essentialCount}/{state.event.essentialItems.length}</span> essentials
+                for {state.event.name} in your list
               </div>
-            )}
+            </div>
+          )}
+
+          <div className="bg-primary/8 border border-primary/15 rounded-xl p-4">
+            <p className="text-small text-primary/80">
+              Don't stress about where things go yet — in the next step you'll fill one bag at a time.
+            </p>
           </div>
         </div>
       </div>

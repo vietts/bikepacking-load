@@ -29,8 +29,8 @@ function ChecklistRow({ name, qty, grams, unit }: { name: string; qty: number; g
   )
 }
 
-export function Step6Share() {
-  const { state } = useWizard()
+export function Step7Share() {
+  const { state, restartKeepingData, reset } = useWizard()
   const packing = usePacking(state)
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
@@ -68,7 +68,7 @@ export function Step6Share() {
   return (
     <div className="space-y-8">
       <div className="print:hidden">
-        <p className="label-caps text-primary mb-2">Step 6</p>
+        <p className="label-caps text-primary mb-2">Step 7</p>
         <h2 className="heading-xl text-base-content">Share your setup</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
           Copy the link below and send it to your riding buddies — it opens this exact setup. Your setup is also saved on this device, so you can come back anytime.
@@ -88,7 +88,7 @@ export function Step6Share() {
         {/* Setup summary (screen) */}
         <div className="text-center print:hidden">
           <div className="text-small text-base-content/60 capitalize">
-            {state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
+            {state.bike?.model ? state.bike.model : state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
           </div>
           <div className="text-5xl font-bold font-[var(--font-heading)] tracking-tight mt-1">
             {formatLoad(packing.onBikeWeight, state.unit)}
@@ -208,6 +208,24 @@ export function Step6Share() {
         <p className="text-small text-base-content/50 text-center">
           The CSV opens in any spreadsheet — and LighterPack reads it too.
         </p>
+
+        {/* Start again — everything stays saved */}
+        <div className="card card-border bg-base-100 p-5 space-y-3">
+          <p className="label-caps text-base-content/40">Not done tweaking?</p>
+          <p className="text-small text-base-content/50">
+            Run through the wizard again — your bike, bags and gear list are all saved, so you only change what you want.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={restartKeepingData} className="btn btn-primary btn-sm flex-1">
+              ↻ Start over (keep my setup)
+            </button>
+            <button
+              onClick={() => { if (window.confirm('Wipe everything and start from scratch?')) reset() }}
+              className="btn btn-ghost btn-sm border border-base-300">
+              Start from scratch
+            </button>
+          </div>
+        </div>
 
         {/* CTA */}
         <div className="card bg-gradient-to-br from-primary/10 to-accent/5 border-2 border-primary/15 p-8 text-center space-y-4">

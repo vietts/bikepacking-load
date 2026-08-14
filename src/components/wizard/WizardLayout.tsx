@@ -3,9 +3,10 @@ import { useWizard } from '../../hooks/useWizard'
 import { Step1Bike } from './Step1Bike'
 import { Step2Event } from './Step2Event'
 import { Step3Bags } from './Step3Bags'
-import { Step4Pack } from './Step4Pack'
-import { Step5Results } from './Step5Results'
-import { Step6Share } from './Step6Share'
+import { Step4Gear } from './Step4Gear'
+import { Step5PackBags } from './Step5PackBags'
+import { Step6Review } from './Step6Review'
+import { Step7Share } from './Step7Share'
 import { Intro } from './Intro'
 import { prefersReducedMotion } from '../../utils/motion'
 import gsap from 'gsap'
@@ -14,9 +15,10 @@ const STEPS = [
   { num: 1, label: "Ride" },
   { num: 2, label: "Trip" },
   { num: 3, label: "Bags" },
-  { num: 4, label: "Pack" },
-  { num: 5, label: "Results" },
-  { num: 6, label: "Share" },
+  { num: 4, label: "Gear" },
+  { num: 5, label: "Pack" },
+  { num: 6, label: "Review" },
+  { num: 7, label: "Share" },
 ]
 
 function StepContent({ step }: { step: number }) {
@@ -24,9 +26,10 @@ function StepContent({ step }: { step: number }) {
     case 1: return <Step1Bike />
     case 2: return <Step2Event />
     case 3: return <Step3Bags />
-    case 4: return <Step4Pack />
-    case 5: return <Step5Results />
-    case 6: return <Step6Share />
+    case 4: return <Step4Gear />
+    case 5: return <Step5PackBags />
+    case 6: return <Step6Review />
+    case 7: return <Step7Share />
     default: return null
   }
 }
@@ -99,7 +102,7 @@ export function WizardLayout() {
           </div>
 
           {/* Timeline breadcrumb */}
-          <nav className="hidden sm:flex items-center gap-6" aria-label="Progress">
+          <nav className="hidden sm:flex items-center gap-4 lg:gap-6" aria-label="Progress">
             {STEPS.map(({ num, label }) => {
               const isCurrent = num === state.step
               const isPast = num < state.step
@@ -193,13 +196,13 @@ export function WizardLayout() {
             ← Back
           </button>
 
-          {state.step < 6 && (
+          {state.step < 7 && (
             <button
               onClick={nextStep}
               disabled={!canProceed()}
               className="btn btn-primary gap-1"
             >
-              Continue →
+              {state.step === 5 ? 'Review list' : 'Continue'} →
             </button>
           )}
         </div>

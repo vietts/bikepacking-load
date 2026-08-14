@@ -55,7 +55,7 @@ const severityStyle: Record<string, { bg: string; border: string; text: string; 
   success: { bg: 'bg-success/8', border: 'border-success/20', text: 'text-success', icon: '✅', label: 'All good' },
 }
 
-export function Step5Results() {
+export function Step6Review() {
   const { state } = useWizard()
   const packing = usePacking(state)
   const messages = validate(state, packing, state.unit)
@@ -108,8 +108,8 @@ export function Step5Results() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="label-caps text-primary mb-2">Step 5</p>
-        <h2 className="heading-xl text-base-content">Your load at a glance</h2>
+        <p className="label-caps text-primary mb-2">Step 6</p>
+        <h2 className="heading-xl text-base-content">Review your load</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
           Here's the summary of your setup{state.event ? ` for ${state.event.name}` : ''}.
         </p>

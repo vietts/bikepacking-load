@@ -1,5 +1,6 @@
 import type { WizardState, SelectedItem, Bag } from '../types'
 import { packingFactorFor, type Catalog } from './catalog'
+import { fitsGirth } from '../hooks/usePacking'
 
 /**
  * Filling twenty <select> dropdowns by hand is the single worst moment in the wizard.
@@ -73,13 +74,18 @@ export function autoAssign(state: WizardState, catalog: Catalog): SelectedItem[]
     const grams = item.weight * qty
     const liters = item.volume * qty * packingFactorFor(spec)
 
+    // A bag with room to spare can still be too narrow at the mouth — girth is a
+    // hard per-item gate, not something that trades off against weight/volume.
+    const throughTheOpening = rooms.filter(r => fitsGirth(item.itemId, r.bag, catalog))
+
     const preferred = spec?.preferredBag
     const candidate =
-      (preferred ? rooms.find(r => r.bag.type === preferred && fits(r, grams, liters)) : undefined)
-      ?? roomiest(rooms.filter(r => fits(r, grams, liters)))
-      // Nothing has room — put it where its type belongs anyway and let the
-      // overflow warnings tell the story, rather than leaving it unassigned.
-      ?? (preferred ? rooms.find(r => r.bag.type === preferred) : undefined)
+      (preferred ? throughTheOpening.find(r => r.bag.type === preferred && fits(r, grams, liters)) : undefined)
+      ?? roomiest(throughTheOpening.filter(r => fits(r, grams, liters)))
+      // Nothing has room — put it where its type belongs anyway (if it fits through
+      // the opening) and let the overflow warnings tell the story, rather than
+      // leaving it unassigned.
+      ?? (preferred ? throughTheOpening.find(r => r.bag.type === preferred) : undefined)
       ?? roomiest(rooms)
 
     if (!candidate) continue

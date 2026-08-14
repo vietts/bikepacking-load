@@ -5,7 +5,7 @@ import { normalizeState } from '../utils/migrate'
 import { BUILTIN_ITEMS, buildCatalog } from '../utils/catalog'
 import { autoAssign } from '../utils/autopack'
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 const STORAGE_KEY = 'bikeload:v1'
 
 type WizardAction =
@@ -17,6 +17,7 @@ type WizardAction =
   | { type: 'REMOVE_BAG'; bagId: string }
   | { type: 'TOGGLE_ITEM'; itemId: string; weight: number; volume: number }
   | { type: 'ASSIGN_ITEM'; itemId: string; bagId: string | null }
+  | { type: 'ASSIGN_MANY'; assignments: { itemId: string; bagId: string | null }[] }
   | { type: 'SET_QTY'; itemId: string; qty: number }
   | { type: 'TOGGLE_WORN'; itemId: string }
   | { type: 'TOGGLE_CONSUMABLE'; itemId: string }
@@ -28,6 +29,7 @@ type WizardAction =
   | { type: 'AUTO_ASSIGN' }
   | { type: 'SET_UNIT'; unit: UnitSystem }
   | { type: 'RESTORE_STATE'; state: WizardState }
+  | { type: 'RESTART_KEEP_DATA' }
   | { type: 'RESET' }
 
 const initialState: WizardState = {
@@ -110,6 +112,15 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           i.itemId === action.itemId ? { ...i, bagId: action.bagId } : i
         ),
       }
+    case 'ASSIGN_MANY': {
+      const byItem = new Map(action.assignments.map(a => [a.itemId, a.bagId]))
+      return {
+        ...state,
+        selectedItems: state.selectedItems.map(i =>
+          byItem.has(i.itemId) ? { ...i, bagId: byItem.get(i.itemId) ?? null } : i
+        ),
+      }
+    }
     case 'SET_QTY':
       return {
         ...state,
@@ -200,6 +211,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       }
     case 'RESTORE_STATE':
       return action.state
+    case 'RESTART_KEEP_DATA':
+      // Back to the start, everything stays saved — bike, bags, gear.
+      return { ...state, step: 1 }
     case 'RESET':
       return initialState
     default:
@@ -217,12 +231,12 @@ function hasContent(state: WizardState): boolean {
 function resolveInitialState(): { state: WizardState; restoredFrom: RestoredFrom } {
   if (typeof window === 'undefined') return { state: initialState, restoredFrom: null }
 
-  // 1. Shared link (#config=...) — land on Results so a buddy sees the setup.
+  // 1. Shared link (#config=...) — land on Review so a buddy sees the setup.
   const match = window.location.hash.match(/#config=(.+)$/)
   if (match) {
     const data = deserializeState(match[1])
     if (data && data.bike) {
-      return { state: { ...data, step: 5 }, restoredFrom: 'url' }
+      return { state: { ...data, step: 6 }, restoredFrom: 'url' }
     }
   }
 
@@ -253,6 +267,7 @@ interface WizardContextType {
   canProceed: () => boolean
   restoredFrom: RestoredFrom
   dismissRestoreNotice: () => void
+  restartKeepingData: () => void
   reset: () => void
 }
 
@@ -280,6 +295,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
 
   const dismissRestoreNotice = () => setRestoredFrom(null)
 
+  const restartKeepingData = () => dispatch({ type: 'RESTART_KEEP_DATA' })
+
   const reset = () => {
     try {
       window.localStorage.removeItem(STORAGE_KEY)
@@ -300,13 +317,14 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       case 3: return state.bags.length > 0
       case 4: return state.selectedItems.length > 0
       case 5: return true
-      case 6: return false
+      case 6: return true
+      case 7: return false
       default: return false
     }
   }
 
   return (
-    <WizardContext.Provider value={{ state, dispatch, nextStep, prevStep, goToStep, canProceed, restoredFrom, dismissRestoreNotice, reset }}>
+    <WizardContext.Provider value={{ state, dispatch, nextStep, prevStep, goToStep, canProceed, restoredFrom, dismissRestoreNotice, restartKeepingData, reset }}>
       {children}
     </WizardContext.Provider>
   )
