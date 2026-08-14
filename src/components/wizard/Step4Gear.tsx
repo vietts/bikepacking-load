@@ -152,6 +152,7 @@ export function Step4Gear() {
                 onToggleWorn={() => dispatch({ type: 'TOGGLE_WORN', itemId: item.id })}
                 onToggleConsumable={() => dispatch({ type: 'TOGGLE_CONSUMABLE', itemId: item.id })}
                 onToggleToBuy={() => dispatch({ type: 'TOGGLE_TO_BUY', itemId: item.id })}
+                onNote={note => dispatch({ type: 'SET_ITEM_NOTE', itemId: item.id, note })}
                 onRemoveCustom={() => dispatch({ type: 'REMOVE_CUSTOM_ITEM', itemId: item.id })}
               />
             ))}

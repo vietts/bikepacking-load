@@ -44,7 +44,7 @@ const positionZone: Record<BagPosition, 'front' | 'center' | 'rear'> = {
 }
 
 const emptyCategoryWeights = (): Record<ItemCategory, number> => ({
-  clothes: 0, sleep: 0, tech: 0, repair: 0, hygiene: 0, food: 0, docs: 0, other: 0,
+  clothes: 0, sleep: 0, tech: 0, repair: 0, hygiene: 0, food: 0, docs: 0, mounted: 0, other: 0,
 })
 
 export function computePacking(state: Pick<WizardState, 'bags' | 'selectedItems' | 'customItems' | 'event'>): PackingStats {
@@ -94,7 +94,9 @@ export function computePacking(state: Pick<WizardState, 'bags' | 'selectedItems'
       bagStats[selectedItem.bagId].totalWeight += lineWeight
       bagStats[selectedItem.bagId].totalVolume += lineVolume
       bagStats[selectedItem.bagId].effectiveVolume += effective
-    } else {
+    } else if (spec?.category !== 'mounted') {
+      // Mounted gear (bottles, GPS, lights) rides on its own attachments:
+      // it weighs on the bike but is never "still to place".
       unassignedWeight += lineWeight
       unassignedVolume += lineVolume
     }

@@ -78,6 +78,17 @@ export function DocsIcon({ className, size = 20 }: IconProps) {
   )
 }
 
+export function MountedIcon({ className, size = 20 }: IconProps) {
+  // Water bottle in its cage — the poster child for gear with its own mount.
+  return (
+    <svg {...iconProps(size)} className={className}>
+      <path d="M10 4h4v2.5c1 .8 1.5 1.8 1.5 3V18a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9.5c0-1.2.5-2.2 1.5-3z" />
+      <path d="M8.5 12h7" opacity={0.4} />
+      <path d="M8.5 15.5h7" opacity={0.4} />
+    </svg>
+  )
+}
+
 export function OtherIcon({ className, size = 20 }: IconProps) {
   return (
     <svg {...iconProps(size)} className={className}>
@@ -95,5 +106,6 @@ export const itemCategoryIcons: Record<ItemCategory, ComponentType<IconProps>> =
   hygiene: HygieneIcon,
   food: FoodIcon,
   docs: DocsIcon,
+  mounted: MountedIcon,
   other: OtherIcon,
 }

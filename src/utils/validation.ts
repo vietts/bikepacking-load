@@ -74,6 +74,18 @@ export function validate(state: WizardState, packing: PackingStats, unit: UnitSy
     }
   }
 
+  // Gear with no bag — it weighs on the bike but nobody's packing it
+  const noBagItems = state.selectedItems.filter(i =>
+    !i.bagId && !i.worn && catalog.get(i.itemId)?.category !== 'mounted'
+  )
+  if (noBagItems.length > 0) {
+    messages.push({
+      severity: 'warning',
+      title: 'Some gear has no bag',
+      message: `${noBagItems.length} item${noBagItems.length === 1 ? '' : 's'} (${load(packing.unassignedWeight)}) ${noBagItems.length === 1 ? "isn't" : "aren't"} in any bag yet — see the list above to place ${noBagItems.length === 1 ? 'it' : 'them'}.`,
+    })
+  }
+
   // Weight distribution (rear-heavy check)
   if (packing.distribution.rear > 60) {
     messages.push({

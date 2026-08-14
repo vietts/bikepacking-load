@@ -1,6 +1,7 @@
 import type { WizardState, SelectedItem, ItemSpec, ItemCategory, ItemPriority, Bag, UnitSystem } from '../types'
+import { buildCatalog, isMounted } from './catalog'
 
-const ITEM_CATEGORIES: ItemCategory[] = ['clothes', 'sleep', 'tech', 'repair', 'hygiene', 'food', 'docs', 'other']
+const ITEM_CATEGORIES: ItemCategory[] = ['clothes', 'sleep', 'tech', 'repair', 'hygiene', 'food', 'docs', 'mounted', 'other']
 const ITEM_PRIORITIES: ItemPriority[] = ['essential', 'high', 'medium', 'low', 'conditional']
 
 /**
@@ -32,6 +33,7 @@ function normalizeSelectedItem(raw: unknown): SelectedItem | null {
     worn: item.worn === true,
     consumable: item.consumable === true,
     toBuy: item.toBuy === true,
+    note: typeof item.note === 'string' && item.note.trim() ? item.note.trim().slice(0, 200) : undefined,
     auto: item.auto === true,
   }
 }
@@ -82,10 +84,14 @@ export function normalizeState(raw: unknown): WizardState | null {
   // An item pointing at a bag that no longer exists would silently vanish from every
   // bag panel while still counting toward the total — send it back to "unassigned".
   const bagIds = new Set(bags.map(b => b.id))
+  const catalog = buildCatalog(customItems)
   for (const item of selectedItems) {
     if (item.bagId && !bagIds.has(item.bagId)) item.bagId = null
     // Worn gear is on your body, never in a bag.
     if (item.worn) item.bagId = null
+    // Mounted gear rides on its own attachments — setups saved before the
+    // 'mounted' category existed may still have it stuffed in a bag.
+    if (isMounted(item.itemId, catalog)) item.bagId = null
   }
 
   const unit: UnitSystem = state.unit === 'imperial' ? 'imperial' : 'metric'
