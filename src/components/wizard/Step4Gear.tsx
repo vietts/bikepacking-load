@@ -1,44 +1,44 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import itemsData from '../../data/items.json'
+import { BUILTIN_ITEMS, CATEGORY_LABELS, CATEGORY_ORDER } from '../../utils/catalog'
+import { GearRow } from '../packing/GearRow'
+import { AddCustomItem } from '../packing/AddCustomItem'
 import type { ItemSpec, ItemCategory } from '../../types'
 import gsap from 'gsap'
-
-const items = itemsData as ItemSpec[]
-
-const categories: { id: ItemCategory; label: string }[] = [
-  { id: 'clothes', label: 'Clothes' },
-  { id: 'sleep', label: 'Sleep' },
-  { id: 'tech', label: 'Tech' },
-  { id: 'repair', label: 'Repair' },
-  { id: 'hygiene', label: 'Hygiene' },
-  { id: 'food', label: 'Food' },
-  { id: 'docs', label: 'Docs' },
-]
 
 export function Step4Gear() {
   const { state, dispatch } = useWizard()
   const [activeCategory, setActiveCategory] = useState<ItemCategory>('clothes')
+  const [query, setQuery] = useState('')
   const itemsRef = useRef<HTMLDivElement>(null)
 
-  const categoryItems = items.filter(i => i.category === activeCategory)
-  const selectedItemIds = new Set(state.selectedItems.map(i => i.itemId))
+  // Hand-added and imported gear sits alongside the catalog, newest first so it's
+  // easy to find right after adding it.
+  const allItems = useMemo<ItemSpec[]>(
+    () => [...state.customItems].reverse().concat(BUILTIN_ITEMS),
+    [state.customItems]
+  )
 
-  // Animate items when category changes
+  const search = query.trim().toLowerCase()
+  // Searching spans the whole catalog — with 48+ items plus your own, hunting
+  // through category tabs to find "pump" is the wrong job for a human.
+  const visibleItems = search
+    ? allItems.filter(i => i.name.toLowerCase().includes(search))
+    : allItems.filter(i => i.category === activeCategory)
+
+  const selectedById = new Map(state.selectedItems.map(i => [i.itemId, i]))
+
+  // Assignment to bags happens later, one bag at a time (Step 5) — this list is
+  // purely "what am I bringing", so GearRow never renders a bag-assign control here.
+  const noBags: never[] = []
+
   useEffect(() => {
     if (!itemsRef.current) return
     gsap.fromTo(itemsRef.current.children,
       { opacity: 0, y: 10 },
       { opacity: 1, y: 0, duration: 0.35, stagger: 0.03, ease: 'power2.out' }
     )
-  }, [activeCategory])
-
-  function isEssential(itemId: string): boolean {
-    return state.event?.essentialItems.includes(itemId) ?? false
-  }
-  function isUnnecessary(itemId: string): boolean {
-    return state.event?.unnecessaryItems.includes(itemId) ?? false
-  }
+  }, [activeCategory, search])
 
   function toggleItem(item: ItemSpec) {
     const avgWeight = Math.round((item.weight.min + item.weight.max) / 2)
@@ -46,9 +46,9 @@ export function Step4Gear() {
     dispatch({ type: 'TOGGLE_ITEM', itemId: item.id, weight: avgWeight, volume: avgVolume })
   }
 
-  const totalWeightKg = state.selectedItems.reduce((s, i) => s + i.weight, 0) / 1000
+  const totalWeightKg = state.selectedItems.reduce((s, i) => s + i.weight * i.qty, 0) / 1000
   const essentialCount = state.event
-    ? state.event.essentialItems.filter(id => selectedItemIds.has(id)).length
+    ? state.event.essentialItems.filter(id => selectedById.has(id)).length
     : 0
 
   return (
@@ -65,59 +65,67 @@ export function Step4Gear() {
       <div className="lg:flex lg:gap-8">
         {/* Left: Gear list */}
         <div className="flex-1 space-y-4">
-          {/* Category tabs */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            {categories.map(cat => {
-              const count = items.filter(i => i.category === cat.id && selectedItemIds.has(i.id)).length
-              return (
-                <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                  className={`btn btn-sm ${activeCategory === cat.id ? 'btn-primary' : 'btn-ghost bg-base-100'}`}>
-                  {cat.label}
-                  {count > 0 && <span className="opacity-60 ml-0.5">({count})</span>}
-                </button>
-              )
-            })}
-          </div>
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search all gear…"
+            aria-label="Search gear"
+            className="input input-bordered w-full"
+          />
 
-          {/* Items */}
+          {/* Category tabs — hidden while searching, so results aren't filtered twice */}
+          {!search && (
+            <div className="flex flex-wrap gap-1.5 pb-1">
+              {CATEGORY_ORDER.map(cat => {
+                const count = allItems.filter(i => i.category === cat && selectedById.has(i.id)).length
+                const total = allItems.filter(i => i.category === cat).length
+                if (total === 0) return null
+                return (
+                  <button key={cat} onClick={() => setActiveCategory(cat)}
+                    className={`btn btn-sm ${activeCategory === cat ? 'btn-primary' : 'btn-ghost bg-base-100'}`}>
+                    {CATEGORY_LABELS[cat]}
+                    {count > 0 && <span className="opacity-60 ml-0.5">({count})</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <div ref={itemsRef} className="space-y-2">
-            {categoryItems.map(item => {
-              const isSelected = selectedItemIds.has(item.id)
-              const essential = isEssential(item.id)
-              const unnecessary = isUnnecessary(item.id)
-
-              return (
-                <div key={item.id}
-                  className={`card card-border p-3.5 transition-all ${
-                    isSelected
-                      ? essential ? 'card-selected !border-success !bg-success/5' : 'card-selected'
-                      : unnecessary ? 'border-warning/20 bg-warning/3' : 'bg-base-100'
-                  }`}>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleItem(item)}
-                      className="checkbox checkbox-sm checkbox-primary mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{item.name}</span>
-                        {essential && <span className="badge badge-success badge-xs">ESSENTIAL</span>}
-                        {item.priority === 'conditional' && <span className="badge badge-warning badge-xs">CONDITIONAL</span>}
-                      </div>
-                      <div className="text-small text-base-content/35 mt-0.5">
-                        {item.weight.min === item.weight.max ? `${item.weight.min}g` : `${item.weight.min}–${item.weight.max}g`}
-                        {item.volume.max > 0 && (<> · {item.volume.min === item.volume.max ? `${item.volume.min}L` : `${item.volume.min}–${item.volume.max}L`}</>)}
-                      </div>
-                      {item.note && <div className="text-small text-base-content/40 mt-0.5 italic">{item.note}</div>}
-                      {unnecessary && isSelected && (
-                        <div className="text-small text-warning font-medium mt-1">
-                          💡 For {state.event?.name} you probably won't need this.
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                </div>
-              )
-            })}
+            {visibleItems.map(item => (
+              <GearRow
+                key={item.id}
+                spec={item}
+                selected={selectedById.get(item.id)}
+                bags={noBags}
+                essential={state.event?.essentialItems.includes(item.id) ?? false}
+                unnecessary={state.event?.unnecessaryItems.includes(item.id) ?? false}
+                eventName={state.event?.name}
+                unit={state.unit}
+                onToggle={() => toggleItem(item)}
+                onQty={qty => dispatch({ type: 'SET_QTY', itemId: item.id, qty })}
+                onAssign={() => {}}
+                onToggleWorn={() => dispatch({ type: 'TOGGLE_WORN', itemId: item.id })}
+                onToggleConsumable={() => dispatch({ type: 'TOGGLE_CONSUMABLE', itemId: item.id })}
+                onRemoveCustom={() => dispatch({ type: 'REMOVE_CUSTOM_ITEM', itemId: item.id })}
+              />
+            ))}
+            {visibleItems.length === 0 && (
+              <p className="text-body text-base-content/60 py-6 text-center">
+                Nothing matches "{query}". Add it yourself below.
+              </p>
+            )}
           </div>
+
+          <AddCustomItem
+            defaultCategory={search ? 'other' : activeCategory}
+            onAdd={item => {
+              dispatch({ type: 'ADD_CUSTOM_ITEM', item, select: true })
+              setQuery('')
+              setActiveCategory(item.category)
+            }}
+          />
         </div>
 
         {/* Right: running summary */}

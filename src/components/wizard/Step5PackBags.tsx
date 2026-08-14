@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking, getItemSpec, fitsGirth } from '../../hooks/usePacking'
-import itemsData from '../../data/items.json'
+import { usePacking, fitsGirth } from '../../hooks/usePacking'
 import type { ItemSpec, BagType, Bag, ItemCategory } from '../../types'
 import { bagIcons } from '../../assets/icons/BagIcons'
 import { itemCategoryIcons } from '../../assets/icons/ItemCategoryIcons'
+import { formatLoad, formatVolume, formatItemWeight } from '../../utils/units'
 import gsap from 'gsap'
 
 type Flight = { key: number; category: ItemCategory; start: { x: number; y: number }; end: { x: number; y: number } }
-
-const items = itemsData as ItemSpec[]
 
 const bagLabels: Record<BagType, string> = {
   handlebar: 'Handlebar',
@@ -41,6 +39,7 @@ export function Step5PackBags() {
 
   const bags = state.bags
   const bag: Bag | undefined = bags[Math.min(bagIndex, bags.length - 1)]
+  const catalog = packing.catalog
 
   // Pre-populate: on entry, drop every unplaced item into its preferred bag (when that bag exists).
   useEffect(() => {
@@ -48,10 +47,10 @@ export function Step5PackBags() {
     autoAssigned.current = true
     const assignments: { itemId: string; bagId: string }[] = []
     for (const si of state.selectedItems) {
-      if (si.bagId) continue
-      const spec = getItemSpec(si.itemId)
+      if (si.bagId || si.worn) continue
+      const spec = catalog.get(si.itemId)
       const target = spec?.preferredBag ? bags.find(b => b.type === spec.preferredBag) : undefined
-      if (target && fitsGirth(si.itemId, target)) assignments.push({ itemId: si.itemId, bagId: target.id })
+      if (target && fitsGirth(si.itemId, target, catalog)) assignments.push({ itemId: si.itemId, bagId: target.id })
     }
     if (assignments.length > 0) dispatch({ type: 'ASSIGN_MANY', assignments })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,16 +99,16 @@ export function Step5PackBags() {
 
   const stats = packing.bagStats[bag.id]
   const inBag = state.selectedItems.filter(i => i.bagId === bag.id)
-  const unplaced = state.selectedItems.filter(i => !i.bagId)
-  const suggestedHere = unplaced.filter(si => getItemSpec(si.itemId)?.preferredBag === bag.type)
-  const otherUnplaced = unplaced.filter(si => getItemSpec(si.itemId)?.preferredBag !== bag.type)
+  const unplaced = state.selectedItems.filter(i => !i.bagId && !i.worn)
+  const suggestedHere = unplaced.filter(si => catalog.get(si.itemId)?.preferredBag === bag.type)
+  const otherUnplaced = unplaced.filter(si => catalog.get(si.itemId)?.preferredBag !== bag.type)
 
   const selectedIds = new Set(state.selectedItems.map(i => i.itemId))
-  const catalogSuggestions = items.filter(i =>
+  const catalogSuggestions = [...catalog.values()].filter(i =>
     !selectedIds.has(i.id) &&
     i.preferredBag === bag.type &&
     !(state.event?.unnecessaryItems.includes(i.id)) &&
-    fitsGirth(i.id, bag)
+    fitsGirth(i.id, bag, catalog)
   )
 
   const isOverloaded = stats && (stats.overWeight || stats.overVolume)
@@ -129,8 +128,8 @@ export function Step5PackBags() {
   }
 
   function addToBag(itemId: string, e: React.MouseEvent<HTMLButtonElement>) {
-    if (!fitsGirth(itemId, bag!)) return
-    const spec = getItemSpec(itemId)
+    if (!fitsGirth(itemId, bag!, catalog)) return
+    const spec = catalog.get(itemId)
     if (spec) triggerFlight(e.currentTarget, spec.category)
     dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: bag!.id })
   }
@@ -204,9 +203,9 @@ export function Step5PackBags() {
             {suggestedHere.length > 0 && (
               <div className="space-y-1.5">
                 {suggestedHere.map(si => {
-                  const spec = getItemSpec(si.itemId)
+                  const spec = catalog.get(si.itemId)
                   const Icon = spec ? itemCategoryIcons[spec.category] : null
-                  const blocked = !fitsGirth(si.itemId, bag)
+                  const blocked = !fitsGirth(si.itemId, bag, catalog)
                   return (
                     <div key={si.itemId} className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
                       blocked ? 'bg-error/5 border-error/20' : 'bg-success/8 border-success/20'
@@ -234,10 +233,10 @@ export function Step5PackBags() {
             {otherUnplaced.length > 0 && (
               <div className="space-y-1.5">
                 {otherUnplaced.map(si => {
-                  const spec = getItemSpec(si.itemId)
+                  const spec = catalog.get(si.itemId)
                   const Icon = spec ? itemCategoryIcons[spec.category] : null
                   const prefLabel = spec?.preferredBag ? bagLabels[spec.preferredBag] : null
-                  const blocked = !fitsGirth(si.itemId, bag)
+                  const blocked = !fitsGirth(si.itemId, bag, catalog)
                   return (
                     <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
                       {Icon && <Icon size={18} className="text-base-content/40 shrink-0" />}
@@ -316,7 +315,7 @@ export function Step5PackBags() {
                       Weight {stats.overWeight && '— over limit!'}
                     </span>
                     <span className={stats.overWeight ? 'text-error font-bold' : 'text-base-content/35'}>
-                      {(stats.totalWeight / 1000).toFixed(1)} / {bag.maxWeight}kg
+                      {formatLoad(stats.totalWeight, state.unit)} / {formatLoad(bag.maxWeight * 1000, state.unit)}
                     </span>
                   </div>
                   <progress className={`progress w-full h-2 ${stats.overWeight ? 'progress-error' : stats.weightPercent > 80 ? 'progress-warning' : 'progress-success'}`}
@@ -328,7 +327,7 @@ export function Step5PackBags() {
                       Space used {stats.overVolume && "— won't fit!"}
                     </span>
                     <span className={stats.overVolume ? 'text-error font-bold' : 'text-base-content/35'}>
-                      {stats.effectiveVolume.toFixed(1)}L / {bag.volume}L
+                      {formatVolume(stats.effectiveVolume, state.unit)} / {formatVolume(bag.volume, state.unit)}
                     </span>
                   </div>
                   <progress className={`progress w-full h-2 ${stats.overVolume ? 'progress-error' : stats.volumePercent > 90 ? 'progress-warning' : 'progress-info'}`}
@@ -340,10 +339,10 @@ export function Step5PackBags() {
             {isOverloaded && stats && (
               <div className="bg-error/10 rounded-lg px-3 py-2 text-small text-error">
                 {stats.overWeight && stats.overVolume
-                  ? `Too heavy and too full. Move ${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg and ${(stats.effectiveVolume - bag.volume).toFixed(1)}L worth of items to another bag.`
+                  ? `Too heavy and too full. Move ${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} and ${formatVolume(stats.effectiveVolume - bag.volume, state.unit)} worth of items to another bag.`
                   : stats.overWeight
-                    ? `${((stats.totalWeight / 1000) - bag.maxWeight).toFixed(1)}kg over the limit. Move heavy items to ${bag.type === 'handlebar' ? 'the frame bag' : 'another bag'}.`
-                    : `These items take up ${stats.effectiveVolume.toFixed(1)}L but the bag only fits ${bag.volume}L. Try swapping for softer gear or move something out.`}
+                    ? `${formatLoad(stats.totalWeight - bag.maxWeight * 1000, state.unit)} over the limit. Move heavy items to ${bag.type === 'handlebar' ? 'the frame bag' : 'another bag'}.`
+                    : `These items take up ${formatVolume(stats.effectiveVolume, state.unit)} but the bag only fits ${formatVolume(bag.volume, state.unit)}. Try swapping for softer gear or move something out.`}
               </div>
             )}
 
@@ -353,18 +352,21 @@ export function Step5PackBags() {
               {inBag.length === 0 ? (
                 <p className="text-small text-base-content/25 italic">Empty — add something from below.</p>
               ) : inBag.map(si => {
-                const spec = getItemSpec(si.itemId)
+                const spec = catalog.get(si.itemId)
                 const Icon = spec ? itemCategoryIcons[spec.category] : null
                 return (
                   <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
                     {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
-                    <span className="text-sm font-medium flex-1 min-w-0 truncate">{spec?.name ?? si.itemId}</span>
-                    <span className="text-small text-base-content/35 shrink-0">{si.weight}g</span>
+                    <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                      {spec?.name ?? si.itemId}
+                      {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
+                    </span>
+                    <span className="text-small text-base-content/35 shrink-0">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
                     <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
                       className="select select-xs select-bordered shrink-0 w-32"
                       aria-label={`Move ${spec?.name ?? si.itemId}`}>
                       {bags.map(b => {
-                        const canFit = b.id === bag.id || fitsGirth(si.itemId, b)
+                        const canFit = b.id === bag.id || fitsGirth(si.itemId, b, catalog)
                         return (
                           <option key={b.id} value={b.id} disabled={!canFit}>
                             {b.id === bag.id ? '✓ ' : '→ '}{bagLabels[b.type]}{!canFit ? " — won't fit" : ''}
@@ -405,7 +407,7 @@ export function Step5PackBags() {
           : packing.isInRecommendedRange ? 'border-success bg-success/8 text-success'
           : 'border-warning bg-warning/8 text-warning'
         }`}>
-          {packing.totalWeightKg.toFixed(1)} kg
+          {formatLoad(packing.onBikeWeight, state.unit)}
           {state.event && (
             <span className="font-normal text-small"> / {state.event.recommendedWeight.min}–{state.event.recommendedWeight.max} kg target</span>
           )}

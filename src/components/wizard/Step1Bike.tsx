@@ -76,6 +76,7 @@ export function Step1Bike() {
           <button
             key={bike.type}
             onClick={() => handleTypeSelect(bike)}
+            aria-pressed={selectedType === bike.type}
             className={`
               card card-border p-5 text-left transition-all cursor-pointer card-hover
               ${selectedType === bike.type ? 'card-selected' : 'bg-base-100 hover:bg-base-100'}
@@ -83,20 +84,21 @@ export function Step1Bike() {
           >
             {(() => { const Icon = bikeIcons[bike.type]; return <Icon className="text-base-content/60 mb-3" /> })()}
             <div className="heading-md text-base-content">{bike.label}</div>
-            <div className="text-small text-base-content/50 mt-1.5 line-clamp-2">{bike.description}</div>
-            <div className="text-small text-base-content/30 mt-3 font-medium">~{bike.defaultWeight} kg</div>
+            <div className="text-small text-base-content/60 mt-1.5 line-clamp-2">{bike.description}</div>
+            <div className="text-small text-base-content/60 mt-3 font-medium">~{bike.defaultWeight} kg</div>
           </button>
         ))}
       </div>
 
       {selectedType && (
         <div ref={sizeRef} className="space-y-3">
-          <label className="label-caps text-base-content/50">Frame size</label>
+          <label className="label-caps text-base-content/60">Frame size</label>
           <div className="join w-full">
             {sizes.map(size => (
               <button
                 key={size}
                 onClick={() => handleSizeSelect(size)}
+                aria-pressed={selectedSize === size}
                 className={`join-item btn flex-1 ${selectedSize === size ? 'btn-primary' : 'btn-ghost bg-base-100'}`}
               >
                 {size}
@@ -104,8 +106,12 @@ export function Step1Bike() {
             ))}
           </div>
 
+          <p className="text-small text-base-content/60">
+            Not sure? <strong className="text-base-content/80">M</strong> is a safe bet for most riders — you can change it anytime.
+          </p>
+
           {state.bike && (
-            <p className="text-small text-base-content/40">
+            <p className="text-small text-base-content/60">
               Frame bag max volume for {selectedType} {selectedSize}: ~{state.bike.frameBagMaxVolume}L
             </p>
           )}
