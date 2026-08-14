@@ -3,6 +3,7 @@ import { useWizard } from '../../hooks/useWizard'
 import bagsData from '../../data/bags-bike24.json'
 import type { BagPreset, BagType, Bag } from '../../types'
 import { bagIcons } from '../../assets/icons/BagIcons'
+import { Toast } from '../Toast'
 import gsap from 'gsap'
 
 const bagPresets = bagsData as BagPreset[]
@@ -19,6 +20,7 @@ const bagTypes: { type: BagType; label: string; description: string }[] = [
 export function Step3Bags() {
   const { state, dispatch } = useWizard()
   const [expandedType, setExpandedType] = useState<BagType | null>(null)
+  const [removed, setRemoved] = useState<{ bag: Bag; itemIds: string[] } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   const bagByType = new Map<BagType, Bag>()
@@ -52,7 +54,24 @@ export function Step3Bags() {
 
   function removeBag(type: BagType) {
     const existing = state.bags.find(b => b.type === type)
-    if (existing) dispatch({ type: 'REMOVE_BAG', bagId: existing.id })
+    if (!existing) return
+    // Remember the bag and its assigned items so the removal can be undone.
+    const itemIds = state.selectedItems.filter(i => i.bagId === existing.id).map(i => i.itemId)
+    dispatch({ type: 'REMOVE_BAG', bagId: existing.id })
+    setRemoved({ bag: existing, itemIds })
+  }
+
+  function undoRemove() {
+    if (!removed) return
+    // A new bag of the same type may have been picked while the toast was still
+    // open (remove → reselect a preset) — re-adding the snapshot would then leave
+    // two bags of the same type. The newer pick wins; the undo becomes a no-op.
+    const alreadyReplaced = state.bags.some(b => b.type === removed.bag.type)
+    if (!alreadyReplaced) {
+      dispatch({ type: 'ADD_BAG', bag: removed.bag })
+      removed.itemIds.forEach(itemId => dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: removed.bag.id }))
+    }
+    setRemoved(null)
   }
 
   function addCustomBag(type: BagType, volume: number, maxWeight: number) {
@@ -100,7 +119,7 @@ export function Step3Bags() {
                 {(() => { const Icon = bagIcons[type]; return <Icon className="text-base-content/50" /> })()}
                 <div className="flex-1 min-w-0">
                   <div className="heading-md">{label}</div>
-                  {!currentBag && <div className="text-small text-base-content/45 mt-0.5">{description}</div>}
+                  {!currentBag && <div className="text-small text-base-content/60 mt-0.5">{description}</div>}
                   {currentBag && (
                     <div className="text-small text-primary font-medium mt-0.5">
                       {currentBag.brand && `${currentBag.brand} · `}{currentBag.volume}L · max {currentBag.maxWeight}kg
@@ -112,14 +131,14 @@ export function Step3Bags() {
                 {currentBag ? (
                   <span className="badge badge-primary badge-sm">✓</span>
                 ) : (
-                  <span className="text-small text-base-content/30 font-medium">{isExpanded ? '▲' : '+ Add'}</span>
+                  <span className="text-small text-base-content/60 font-medium">{isExpanded ? '▲' : '+ Add'}</span>
                 )}
               </button>
 
               {currentBag && !isExpanded && (
                 <div className="px-5 pb-4 flex items-center gap-3">
                   <button onClick={() => toggleExpand(type)} className="link link-primary text-small">Change</button>
-                  <span className="text-base-content/15">·</span>
+                  <span className="text-base-content/40">·</span>
                   <button onClick={() => removeBag(type)} className="link link-error text-small">Remove</button>
                 </div>
               )}
@@ -128,7 +147,7 @@ export function Step3Bags() {
                 <div className="border-t border-base-300 bg-base-200/30 p-5 space-y-4">
                   {currentBag && (
                     <div className="flex items-center justify-between">
-                      <span className="text-small text-base-content/45">Tap another to switch:</span>
+                      <span className="text-small text-base-content/60">Tap another to switch:</span>
                       <button onClick={() => removeBag(type)} className="link link-error text-small">Remove bag</button>
                     </div>
                   )}
@@ -155,7 +174,7 @@ export function Step3Bags() {
                               {preset.brand}
                             </div>
                           )}
-                          <div className="text-small text-base-content/35 mt-1">
+                          <div className="text-small text-base-content/60 mt-1">
                             {preset.volume}L · max {preset.maxWeight}kg{preset.bagWeight && ` · ${preset.bagWeight}g`}
                           </div>
                           {preset.basDiscount && (
@@ -183,12 +202,21 @@ export function Step3Bags() {
             · {state.bags.reduce((s, b) => s + b.volume, 0).toFixed(1)}L total capacity
             · {state.bags.reduce((s, b) => s + b.maxWeight, 0).toFixed(1)}kg max weight
             {state.bags.some(b => b.bagWeight) && (
-              <span className="text-primary/60">
+              <span className="text-primary/70">
                 {' '}· {(state.bags.reduce((s, b) => s + (b.bagWeight ?? 0), 0) / 1000).toFixed(1)}kg bags weight
               </span>
             )}
           </p>
         </div>
+      )}
+
+      {removed && (
+        <Toast
+          message={`${removed.bag.type.replace('_', ' ')} bag removed${removed.itemIds.length ? ` — ${removed.itemIds.length} item${removed.itemIds.length > 1 ? 's' : ''} moved to Unassigned` : ''}`}
+          actionLabel="Undo"
+          onAction={undoRemove}
+          onDismiss={() => setRemoved(null)}
+        />
       )}
     </div>
   )
@@ -199,19 +227,21 @@ function CustomBagInput({ type, maxFrameVolume, onAdd }: {
 }) {
   const [volume, setVolume] = useState(5)
   const [maxWeight, setMaxWeight] = useState(3)
+  const volumeId = `custom-volume-${type}`
+  const weightId = `custom-weight-${type}`
   return (
     <div className="card card-border bg-base-100 p-4 space-y-3">
-      <p className="label-caps text-base-content/40">Custom specs</p>
+      <p className="label-caps text-base-content/60">Custom specs</p>
       <div className="flex gap-4">
         <div className="flex-1">
-          <label className="text-small text-base-content/50">Volume (L)</label>
-          <input type="number" value={volume} onChange={e => setVolume(Number(e.target.value))}
+          <label htmlFor={volumeId} className="text-small text-base-content/60">Volume (L)</label>
+          <input id={volumeId} type="number" value={volume} onChange={e => setVolume(Number(e.target.value))}
             min={0.5} max={maxFrameVolume ?? 50} step={0.5} className="input input-sm input-bordered w-full mt-1" />
-          {maxFrameVolume && <div className="text-small text-base-content/30 mt-0.5">Max for your frame: {maxFrameVolume}L</div>}
+          {maxFrameVolume && <div className="text-small text-base-content/60 mt-0.5">Max for your frame: {maxFrameVolume}L</div>}
         </div>
         <div className="flex-1">
-          <label className="text-small text-base-content/50">Max weight (kg)</label>
-          <input type="number" value={maxWeight} onChange={e => setMaxWeight(Number(e.target.value))}
+          <label htmlFor={weightId} className="text-small text-base-content/60">Max weight (kg)</label>
+          <input id={weightId} type="number" value={maxWeight} onChange={e => setMaxWeight(Number(e.target.value))}
             min={0.5} max={20} step={0.5} className="input input-sm input-bordered w-full mt-1" />
         </div>
       </div>

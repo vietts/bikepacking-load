@@ -54,12 +54,13 @@ export function Step2Event() {
 
       {/* BAS Events */}
       <div className="space-y-4">
-        <p className="label-caps text-base-content/40">BAS Events</p>
+        <p className="label-caps text-base-content/60">BAS Events</p>
         <div ref={basRef} className="grid gap-4">
           {basEvents.map(event => (
             <button
               key={event.id}
               onClick={() => handleSelect(event)}
+              aria-pressed={state.event?.id === event.id}
               className={`
                 card card-border p-5 text-left transition-all cursor-pointer card-hover
                 bg-gradient-to-br ${eventGradient[event.id] ?? 'from-base-100 to-base-100'}
@@ -69,12 +70,12 @@ export function Step2Event() {
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
                   <div className="heading-md text-base-content">{event.name}</div>
-                  <div className="text-body text-base-content/55 mt-1.5">{event.description}</div>
+                  <div className="text-body text-base-content/60 mt-1.5">{event.description}</div>
                   <div className="flex gap-4 mt-3">
-                    <span className="text-small text-base-content/40 font-medium">
+                    <span className="text-small text-base-content/60 font-medium">
                       Target: {event.recommendedWeight.min}–{event.recommendedWeight.max} kg
                     </span>
-                    <span className="text-small text-base-content/30">
+                    <span className="text-small text-base-content/60">
                       Max: {event.maxAcceptableWeight} kg
                     </span>
                   </div>
@@ -90,20 +91,21 @@ export function Step2Event() {
 
       {/* Generic Types */}
       <div className="space-y-4">
-        <p className="label-caps text-base-content/40">Or choose a trip type</p>
+        <p className="label-caps text-base-content/60">Or choose a trip type</p>
         <div ref={genRef} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {genericEvents.map(event => (
             <button
               key={event.id}
               onClick={() => handleSelect(event)}
+              aria-pressed={state.event?.id === event.id}
               className={`
                 card card-border p-4 text-left transition-all cursor-pointer card-hover
                 ${state.event?.id === event.id ? 'card-selected' : 'bg-base-100'}
               `}
             >
               <div className="heading-md text-base-content text-sm">{event.name}</div>
-              <div className="text-small text-base-content/50 mt-1">{event.description}</div>
-              <div className="text-small text-base-content/30 mt-2 font-medium">
+              <div className="text-small text-base-content/60 mt-1">{event.description}</div>
+              <div className="text-small text-base-content/60 mt-2 font-medium">
                 {event.recommendedWeight.min}–{event.recommendedWeight.max} kg
               </div>
             </button>

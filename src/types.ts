@@ -63,7 +63,9 @@ export interface Bag {
   items: string[] // assigned selected item IDs
 }
 
-export type ItemCategory = 'clothes' | 'sleep' | 'tech' | 'repair' | 'hygiene' | 'food' | 'docs'
+// 'other' is the home for items the user adds by hand or imports from a CSV,
+// where the source category doesn't map onto one of ours.
+export type ItemCategory = 'clothes' | 'sleep' | 'tech' | 'repair' | 'hygiene' | 'food' | 'docs' | 'other'
 export type ItemPriority = 'essential' | 'high' | 'medium' | 'low' | 'conditional'
 
 export interface ItemSpec {
@@ -83,8 +85,12 @@ export interface ItemSpec {
 export interface SelectedItem {
   itemId: string
   bagId: string | null // null = selected but not assigned to a bag
-  weight: number // grams, user-chosen value within range
-  volume: number // liters, user-chosen value within range
+  weight: number // grams PER UNIT, user-chosen value within range
+  volume: number // liters PER UNIT, user-chosen value within range
+  qty: number // how many you're bringing — totals multiply by this
+  worn?: boolean // you're wearing it, so it never goes in a bag
+  consumable?: boolean // food, water, gas — it shrinks as you ride
+  auto?: boolean // true = pre-selected because it's essential for the chosen event (not a manual pick)
 }
 
 export interface WizardState {
@@ -93,7 +99,11 @@ export interface WizardState {
   event: BikeEvent | null
   bags: Bag[]
   selectedItems: SelectedItem[]
+  customItems: ItemSpec[] // added by hand or imported from CSV — resolved alongside the catalog
+  unit: UnitSystem
 }
+
+export type UnitSystem = 'metric' | 'imperial'
 
 export type ValidationSeverity = 'error' | 'warning' | 'info' | 'success'
 
