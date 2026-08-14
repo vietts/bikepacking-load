@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking, type PackingStats, type BagStats } from '../../hooks/usePacking'
+import { usePacking, fitsGirth, type PackingStats, type BagStats } from '../../hooks/usePacking'
 import type { Bag, SelectedItem, UnitSystem } from '../../types'
 import type { Catalog } from '../../utils/catalog'
 import { validate } from '../../utils/validation'
@@ -141,7 +141,7 @@ const severityStyle: Record<string, { bg: string; border: string; text: string; 
 }
 
 export function Step6Review() {
-  const { state } = useWizard()
+  const { state, dispatch, goToStep } = useWizard()
   const packing = usePacking(state)
   const messages = validate(state, packing, state.unit)
   const weightRef = useRef<HTMLSpanElement>(null)
@@ -242,6 +242,65 @@ export function Step6Review() {
           </div>
         )}
       </div>
+
+      {/* Gear that never got a bag — it weighs on the bike but is in nobody's
+          packing list, so surface it loudly and let the rider fix it right here. */}
+      {(() => {
+        const unassigned = state.selectedItems.filter(i =>
+          !i.bagId && !i.worn && packing.catalog.get(i.itemId)?.category !== 'mounted'
+        )
+        if (unassigned.length === 0) return null
+        const unassignedWeight = unassigned.reduce((s, i) => s + i.weight * i.qty, 0)
+        return (
+          <div className="card border-2 border-warning bg-warning/8 p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="font-semibold text-warning">
+                ⚠️ {unassigned.length} item{unassigned.length === 1 ? " isn't" : "s aren't"} in any bag
+                <span className="font-normal"> · {formatLoad(unassignedWeight, state.unit)} with no home yet</span>
+              </p>
+              {state.bags.length > 0 && (
+                <button onClick={() => goToStep(5)} className="link text-small text-warning font-medium">
+                  ← Back to packing
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {unassigned.map(si => {
+                const spec = packing.catalog.get(si.itemId)
+                const Icon = spec ? itemCategoryIcons[spec.category] : null
+                return (
+                  <div key={si.itemId} className="flex items-center gap-2 bg-base-100 rounded-lg px-3 py-2">
+                    {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
+                    <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                      {spec?.name ?? si.itemId}
+                      {si.qty > 1 && <span className="text-base-content/40 font-normal"> ×{si.qty}</span>}
+                    </span>
+                    <span className="text-small text-base-content/40 shrink-0">{formatItemWeight(si.weight * si.qty, state.unit)}</span>
+                    {state.bags.length > 0 && (
+                      <select
+                        value=""
+                        onChange={e => e.target.value && dispatch({ type: 'ASSIGN_ITEM', itemId: si.itemId, bagId: e.target.value })}
+                        aria-label={`Put ${spec?.name ?? si.itemId} in a bag`}
+                        className="select select-xs select-bordered shrink-0 w-36"
+                      >
+                        <option value="" disabled>Put in a bag…</option>
+                        {state.bags.map(b => {
+                          const canFit = fitsGirth(si.itemId, b, packing.catalog)
+                          return (
+                            <option key={b.id} value={b.id} disabled={!canFit}>
+                              → {bagTypeLabels[b.type]}{!canFit ? " — won't fit" : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       <WeightBreakdown packing={packing} unit={state.unit} />
 
