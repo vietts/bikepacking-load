@@ -2,9 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import itemsData from '../../data/items.json'
-import type { ItemSpec, BagType, Bag } from '../../types'
+import type { ItemSpec, BagType, Bag, ItemCategory } from '../../types'
 import { bagIcons } from '../../assets/icons/BagIcons'
+import { itemCategoryIcons } from '../../assets/icons/ItemCategoryIcons'
 import gsap from 'gsap'
+
+type Flight = { key: number; category: ItemCategory; start: { x: number; y: number }; end: { x: number; y: number } }
 
 const items = itemsData as ItemSpec[]
 
@@ -32,6 +35,9 @@ export function Step5PackBags() {
   const [bagIndex, setBagIndex] = useState(0)
   const focusRef = useRef<HTMLDivElement>(null)
   const autoAssigned = useRef(false)
+  const bagTargetRef = useRef<HTMLSpanElement>(null)
+  const flightRef = useRef<HTMLDivElement>(null)
+  const [flight, setFlight] = useState<Flight | null>(null)
 
   const bags = state.bags
   const bag: Bag | undefined = bags[Math.min(bagIndex, bags.length - 1)]
@@ -59,6 +65,24 @@ export function Step5PackBags() {
       { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }
     )
   }, [bagIndex])
+
+  // Fly the item icon from where it was clicked into the focused bag
+  useEffect(() => {
+    if (!flight || !flightRef.current) return
+    gsap.fromTo(flightRef.current,
+      { left: flight.start.x, top: flight.start.y, opacity: 1, scale: 1 },
+      {
+        left: flight.end.x, top: flight.end.y, opacity: 0, scale: 0.3,
+        duration: 0.45, ease: 'power2.in',
+        onComplete: () => {
+          setFlight(null)
+          if (bagTargetRef.current) {
+            gsap.fromTo(bagTargetRef.current, { scale: 1 }, { scale: 1.15, duration: 0.15, ease: 'power2.out', yoyo: true, repeat: 1 })
+          }
+        },
+      }
+    )
+  }, [flight])
 
   if (!bag) {
     return (
@@ -91,7 +115,21 @@ export function Step5PackBags() {
   const isNearLimit = stats && !isOverloaded && (stats.weightPercent > 80 || stats.volumePercent > 90)
   const isLastBag = bagIndex === bags.length - 1
 
-  function addToBag(itemId: string) {
+  function triggerFlight(sourceEl: HTMLElement, category: ItemCategory) {
+    if (!bagTargetRef.current) return
+    const s = sourceEl.getBoundingClientRect()
+    const t = bagTargetRef.current.getBoundingClientRect()
+    setFlight({
+      key: Date.now(),
+      category,
+      start: { x: s.left + s.width / 2 - 10, y: s.top + s.height / 2 - 10 },
+      end: { x: t.left + t.width / 2 - 10, y: t.top + t.height / 2 - 10 },
+    })
+  }
+
+  function addToBag(itemId: string, e: React.MouseEvent<HTMLButtonElement>) {
+    const spec = getItemSpec(itemId)
+    if (spec) triggerFlight(e.currentTarget, spec.category)
     dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: bag!.id })
   }
 
@@ -99,7 +137,8 @@ export function Step5PackBags() {
     dispatch({ type: 'ASSIGN_ITEM', itemId, bagId })
   }
 
-  function quickAddFromCatalog(item: ItemSpec) {
+  function quickAddFromCatalog(item: ItemSpec, e: React.MouseEvent<HTMLButtonElement>) {
+    triggerFlight(e.currentTarget, item.category)
     const avgWeight = Math.round((item.weight.min + item.weight.max) / 2)
     const avgVolume = +((item.volume.min + item.volume.max) / 2).toFixed(2)
     dispatch({ type: 'TOGGLE_ITEM', itemId: item.id, weight: avgWeight, volume: avgVolume })
@@ -141,14 +180,100 @@ export function Step5PackBags() {
         })}
       </div>
 
-      <div ref={focusRef} className="lg:flex lg:gap-8 lg:items-start">
+      <div ref={focusRef} className="space-y-4">
+        {/* Flying item ghost */}
+        {flight && (() => {
+          const FlightIcon = itemCategoryIcons[flight.category]
+          return (
+            <div ref={flightRef} className="fixed z-50 pointer-events-none text-primary drop-shadow"
+              style={{ left: flight.start.x, top: flight.start.y }}>
+              <FlightIcon size={20} />
+            </div>
+          )
+        })()}
+
+        {/* What still needs a home + ideas — above the focused bag */}
+        {unplaced.length > 0 && (
+          <div className="card card-border bg-base-100 p-4 space-y-3">
+            <p className="label-caps text-base-content/40">
+              Still to place <span className="badge badge-warning badge-xs align-middle">{unplaced.length}</span>
+            </p>
+
+            {suggestedHere.length > 0 && (
+              <div className="space-y-1.5">
+                {suggestedHere.map(si => {
+                  const spec = getItemSpec(si.itemId)
+                  const Icon = spec ? itemCategoryIcons[spec.category] : null
+                  return (
+                    <div key={si.itemId} className="flex items-center gap-2 bg-success/8 border border-success/20 rounded-lg px-3 py-2">
+                      {Icon && <Icon size={18} className="text-success/70 shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
+                        <div className="text-[10px] text-success font-semibold">FITS THIS BAG</div>
+                      </div>
+                      <button onClick={e => addToBag(si.itemId, e)} className="btn btn-success btn-xs">+ Add</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {otherUnplaced.length > 0 && (
+              <div className="space-y-1.5">
+                {otherUnplaced.map(si => {
+                  const spec = getItemSpec(si.itemId)
+                  const Icon = spec ? itemCategoryIcons[spec.category] : null
+                  const prefLabel = spec?.preferredBag ? bagLabels[spec.preferredBag] : null
+                  return (
+                    <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
+                      {Icon && <Icon size={18} className="text-base-content/40 shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
+                        {prefLabel && <div className="text-[10px] text-base-content/35">usually goes in {prefLabel}</div>}
+                      </div>
+                      <button onClick={e => addToBag(si.itemId, e)} className="btn btn-ghost btn-xs border border-base-300">+ Add</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {unplaced.length === 0 && (
+          <div className="card border-2 border-success/30 bg-success/5 p-4">
+            <p className="text-small text-success font-medium">✓ Everything has a home. Check each bag, then continue.</p>
+          </div>
+        )}
+
+        {catalogSuggestions.length > 0 && (
+          <div className="card card-border bg-base-100 p-4 space-y-2">
+            <p className="label-caps text-base-content/40">Ideas for this bag</p>
+            <p className="text-[11px] text-base-content/35 -mt-1">Not on your list yet — tap to add.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {catalogSuggestions.map(item => {
+                const Icon = itemCategoryIcons[item.category]
+                return (
+                  <button key={item.id} onClick={e => quickAddFromCatalog(item, e)}
+                    className="badge badge-outline badge-lg cursor-pointer hover:badge-primary transition-colors gap-1.5">
+                    <Icon size={14} />
+                    {item.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Focused bag */}
-        <div className="flex-1 space-y-4">
+        <div className="space-y-4">
           <div className={`card p-5 space-y-4 border-2 ${
             isOverloaded ? 'border-error bg-error/5' : isNearLimit ? 'border-warning bg-warning/5' : 'card-border bg-base-100'
           }`}>
             <div className="flex items-center gap-3">
-              {(() => { const Icon = bagIcons[bag.type]; return <Icon className="text-base-content/60" /> })()}
+              <span ref={bagTargetRef} className="shrink-0">
+                {(() => { const Icon = bagIcons[bag.type]; return <Icon className="text-base-content/60" /> })()}
+              </span>
               <div className="flex-1 min-w-0">
                 <div className="heading-md">
                   {bagLabels[bag.type]}
@@ -207,8 +332,10 @@ export function Step5PackBags() {
                 <p className="text-small text-base-content/25 italic">Empty — add something from below.</p>
               ) : inBag.map(si => {
                 const spec = getItemSpec(si.itemId)
+                const Icon = spec ? itemCategoryIcons[spec.category] : null
                 return (
                   <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
+                    {Icon && <Icon size={16} className="text-base-content/40 shrink-0" />}
                     <span className="text-sm font-medium flex-1 min-w-0 truncate">{spec?.name ?? si.itemId}</span>
                     <span className="text-small text-base-content/35 shrink-0">{si.weight}g</span>
                     <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
@@ -239,89 +366,22 @@ export function Step5PackBags() {
               </button>
             ) : (
               <span className="text-small text-base-content/40">
-                Last bag — hit <span className="font-semibold">Continue</span> below to review your load.
+                Last bag — hit <span className="font-semibold">Review list</span> below to check your load.
               </span>
             )}
           </div>
         </div>
 
-        {/* Right rail: what still needs a home + ideas */}
-        <div className="lg:w-80 mt-8 lg:mt-0 space-y-4">
-          {unplaced.length > 0 && (
-            <div className="card card-border bg-base-100 p-4 space-y-3">
-              <p className="label-caps text-base-content/40">
-                Still to place <span className="badge badge-warning badge-xs align-middle">{unplaced.length}</span>
-              </p>
-
-              {suggestedHere.length > 0 && (
-                <div className="space-y-1.5">
-                  {suggestedHere.map(si => {
-                    const spec = getItemSpec(si.itemId)
-                    return (
-                      <div key={si.itemId} className="flex items-center gap-2 bg-success/8 border border-success/20 rounded-lg px-3 py-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
-                          <div className="text-[10px] text-success font-semibold">FITS THIS BAG</div>
-                        </div>
-                        <button onClick={() => addToBag(si.itemId)} className="btn btn-success btn-xs">+ Add</button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {otherUnplaced.length > 0 && (
-                <div className="space-y-1.5">
-                  {otherUnplaced.map(si => {
-                    const spec = getItemSpec(si.itemId)
-                    const prefLabel = spec?.preferredBag ? bagLabels[spec.preferredBag] : null
-                    return (
-                      <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
-                          {prefLabel && <div className="text-[10px] text-base-content/35">usually goes in {prefLabel}</div>}
-                        </div>
-                        <button onClick={() => addToBag(si.itemId)} className="btn btn-ghost btn-xs border border-base-300">+ Add</button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+        {/* Total so far */}
+        <div className={`card p-4 text-center font-semibold border-2 ${
+          packing.isOverMaxWeight ? 'border-error bg-error/8 text-error'
+          : packing.isInRecommendedRange ? 'border-success bg-success/8 text-success'
+          : 'border-warning bg-warning/8 text-warning'
+        }`}>
+          {packing.totalWeightKg.toFixed(1)} kg
+          {state.event && (
+            <span className="font-normal text-small"> / {state.event.recommendedWeight.min}–{state.event.recommendedWeight.max} kg target</span>
           )}
-
-          {unplaced.length === 0 && (
-            <div className="card border-2 border-success/30 bg-success/5 p-4">
-              <p className="text-small text-success font-medium">✓ Everything has a home. Check each bag, then continue.</p>
-            </div>
-          )}
-
-          {catalogSuggestions.length > 0 && (
-            <div className="card card-border bg-base-100 p-4 space-y-2">
-              <p className="label-caps text-base-content/40">Ideas for this bag</p>
-              <p className="text-[11px] text-base-content/35 -mt-1">Not on your list yet — tap to add.</p>
-              <div className="flex flex-wrap gap-1.5">
-                {catalogSuggestions.map(item => (
-                  <button key={item.id} onClick={() => quickAddFromCatalog(item)}
-                    className="badge badge-outline badge-lg cursor-pointer hover:badge-primary transition-colors">
-                    + {item.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Total so far */}
-          <div className={`card p-4 text-center font-semibold border-2 ${
-            packing.isOverMaxWeight ? 'border-error bg-error/8 text-error'
-            : packing.isInRecommendedRange ? 'border-success bg-success/8 text-success'
-            : 'border-warning bg-warning/8 text-warning'
-          }`}>
-            {packing.totalWeightKg.toFixed(1)} kg
-            {state.event && (
-              <span className="font-normal text-small"> / {state.event.recommendedWeight.min}–{state.event.recommendedWeight.max} kg target</span>
-            )}
-          </div>
         </div>
       </div>
     </div>

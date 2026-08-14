@@ -135,7 +135,7 @@ export function WizardLayout() {
               disabled={!canProceed()}
               className="btn btn-primary gap-1"
             >
-              Continue →
+              {state.step === 5 ? 'Review list' : 'Continue'} →
             </button>
           )}
         </div>
