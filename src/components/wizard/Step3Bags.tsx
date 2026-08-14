@@ -46,7 +46,8 @@ export function Step3Bags() {
     dispatch({ type: 'ADD_BAG', bag: {
       id: `${preset.type}_${Date.now()}`, type: preset.type, position: preset.position,
       volume, maxWeight: preset.maxWeight, brand: preset.brand, model: preset.model,
-      bagWeight: preset.bagWeight, recommended: preset.recommended, items: [],
+      bagWeight: preset.bagWeight, openingDiameter: preset.openingDiameter,
+      recommended: preset.recommended, items: [],
     }})
   }
 

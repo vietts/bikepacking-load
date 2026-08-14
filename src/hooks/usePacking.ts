@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { WizardState, BagPosition } from '../types'
+import type { WizardState, BagPosition, BagType, Bag } from '../types'
 import itemsData from '../data/items.json'
 import type { ItemSpec } from '../types'
 
@@ -141,4 +141,35 @@ export function getItemPackingFactor(itemId: string): number {
   const spec = items.find(i => i.id === itemId)
   if (!spec) return 1.0
   return PACKING_FACTOR[spec.rigidity]?.[spec.shape] ?? 1.0
+}
+
+/**
+ * Fallback opening diameter (cm) per bag type, for bags without a measured
+ * openingDiameter. null = opening not girth-constrained (open platform).
+ */
+const DEFAULT_OPENING_DIAMETER: Record<BagType, number | null> = {
+  handlebar: 15,
+  saddle: 14,
+  fork: 14,
+  frame: 6,
+  top_tube: 5,
+  rear_rack: null,
+}
+
+export function getOpeningDiameter(bag: Pick<Bag, 'type' | 'openingDiameter'>): number | null {
+  return bag.openingDiameter ?? DEFAULT_OPENING_DIAMETER[bag.type]
+}
+
+/**
+ * Girth gate: an item physically passes through the bag opening only if its
+ * compressed diameter fits. Per-item boolean check, independent of the
+ * remaining weight/volume budget — a bag with litres to spare can still
+ * reject a sleeping bag whose roll is wider than its mouth.
+ */
+export function fitsGirth(itemId: string, bag: Pick<Bag, 'type' | 'openingDiameter'>): boolean {
+  const packed = items.find(i => i.id === itemId)?.packedDiameter
+  if (packed == null) return true
+  const opening = getOpeningDiameter(bag)
+  if (opening == null) return true
+  return packed <= opening
 }

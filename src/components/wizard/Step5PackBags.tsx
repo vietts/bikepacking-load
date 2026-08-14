@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useWizard } from '../../hooks/useWizard'
-import { usePacking, getItemSpec } from '../../hooks/usePacking'
+import { usePacking, getItemSpec, fitsGirth } from '../../hooks/usePacking'
 import itemsData from '../../data/items.json'
 import type { ItemSpec, BagType, Bag, ItemCategory } from '../../types'
 import { bagIcons } from '../../assets/icons/BagIcons'
@@ -51,7 +51,7 @@ export function Step5PackBags() {
       if (si.bagId) continue
       const spec = getItemSpec(si.itemId)
       const target = spec?.preferredBag ? bags.find(b => b.type === spec.preferredBag) : undefined
-      if (target) assignments.push({ itemId: si.itemId, bagId: target.id })
+      if (target && fitsGirth(si.itemId, target)) assignments.push({ itemId: si.itemId, bagId: target.id })
     }
     if (assignments.length > 0) dispatch({ type: 'ASSIGN_MANY', assignments })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,7 +108,8 @@ export function Step5PackBags() {
   const catalogSuggestions = items.filter(i =>
     !selectedIds.has(i.id) &&
     i.preferredBag === bag.type &&
-    !(state.event?.unnecessaryItems.includes(i.id))
+    !(state.event?.unnecessaryItems.includes(i.id)) &&
+    fitsGirth(i.id, bag)
   )
 
   const isOverloaded = stats && (stats.overWeight || stats.overVolume)
@@ -128,6 +129,7 @@ export function Step5PackBags() {
   }
 
   function addToBag(itemId: string, e: React.MouseEvent<HTMLButtonElement>) {
+    if (!fitsGirth(itemId, bag!)) return
     const spec = getItemSpec(itemId)
     if (spec) triggerFlight(e.currentTarget, spec.category)
     dispatch({ type: 'ASSIGN_ITEM', itemId, bagId: bag!.id })
@@ -204,14 +206,25 @@ export function Step5PackBags() {
                 {suggestedHere.map(si => {
                   const spec = getItemSpec(si.itemId)
                   const Icon = spec ? itemCategoryIcons[spec.category] : null
+                  const blocked = !fitsGirth(si.itemId, bag)
                   return (
-                    <div key={si.itemId} className="flex items-center gap-2 bg-success/8 border border-success/20 rounded-lg px-3 py-2">
-                      {Icon && <Icon size={18} className="text-success/70 shrink-0" />}
+                    <div key={si.itemId} className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+                      blocked ? 'bg-error/5 border-error/20' : 'bg-success/8 border-success/20'
+                    }`}>
+                      {Icon && <Icon size={18} className={`${blocked ? 'text-error/60' : 'text-success/70'} shrink-0`} />}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
-                        <div className="text-[10px] text-success font-semibold">FITS THIS BAG</div>
+                        {blocked ? (
+                          <div className="text-[10px] text-error font-semibold">TOO WIDE FOR THIS BAG'S OPENING</div>
+                        ) : (
+                          <div className="text-[10px] text-success font-semibold">FITS THIS BAG</div>
+                        )}
                       </div>
-                      <button onClick={e => addToBag(si.itemId, e)} className="btn btn-success btn-xs">+ Add</button>
+                      {blocked ? (
+                        <button disabled className="btn btn-xs btn-ghost text-error/60 border border-error/20">Won't fit</button>
+                      ) : (
+                        <button onClick={e => addToBag(si.itemId, e)} className="btn btn-success btn-xs">+ Add</button>
+                      )}
                     </div>
                   )
                 })}
@@ -224,14 +237,23 @@ export function Step5PackBags() {
                   const spec = getItemSpec(si.itemId)
                   const Icon = spec ? itemCategoryIcons[spec.category] : null
                   const prefLabel = spec?.preferredBag ? bagLabels[spec.preferredBag] : null
+                  const blocked = !fitsGirth(si.itemId, bag)
                   return (
                     <div key={si.itemId} className="flex items-center gap-2 bg-base-200/40 rounded-lg px-3 py-2">
                       {Icon && <Icon size={18} className="text-base-content/40 shrink-0" />}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{spec?.name ?? si.itemId}</div>
-                        {prefLabel && <div className="text-[10px] text-base-content/35">usually goes in {prefLabel}</div>}
+                        {blocked ? (
+                          <div className="text-[10px] text-error/70">too wide for this bag's opening</div>
+                        ) : prefLabel ? (
+                          <div className="text-[10px] text-base-content/35">usually goes in {prefLabel}</div>
+                        ) : null}
                       </div>
-                      <button onClick={e => addToBag(si.itemId, e)} className="btn btn-ghost btn-xs border border-base-300">+ Add</button>
+                      {blocked ? (
+                        <button disabled className="btn btn-ghost btn-xs border border-base-300 opacity-50">Won't fit</button>
+                      ) : (
+                        <button onClick={e => addToBag(si.itemId, e)} className="btn btn-ghost btn-xs border border-base-300">+ Add</button>
+                      )}
                     </div>
                   )
                 })}
@@ -341,9 +363,14 @@ export function Step5PackBags() {
                     <select value={bag.id} onChange={e => moveItem(si.itemId, e.target.value || null)}
                       className="select select-xs select-bordered shrink-0 w-32"
                       aria-label={`Move ${spec?.name ?? si.itemId}`}>
-                      {bags.map(b => (
-                        <option key={b.id} value={b.id}>{b.id === bag.id ? '✓ ' : '→ '}{bagLabels[b.type]}</option>
-                      ))}
+                      {bags.map(b => {
+                        const canFit = b.id === bag.id || fitsGirth(si.itemId, b)
+                        return (
+                          <option key={b.id} value={b.id} disabled={!canFit}>
+                            {b.id === bag.id ? '✓ ' : '→ '}{bagLabels[b.type]}{!canFit ? " — won't fit" : ''}
+                          </option>
+                        )
+                      })}
                       <option value="">Set aside</option>
                     </select>
                   </div>
