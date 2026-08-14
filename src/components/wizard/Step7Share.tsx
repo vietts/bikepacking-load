@@ -3,8 +3,8 @@ import { useWizard } from '../../hooks/useWizard'
 import { usePacking, getItemSpec } from '../../hooks/usePacking'
 import { getShareUrl } from '../../utils/url-state'
 
-export function Step6Share() {
-  const { state } = useWizard()
+export function Step7Share() {
+  const { state, restartKeepingData, resetAll } = useWizard()
   const packing = usePacking(state)
   const [copied, setCopied] = useState(false)
 
@@ -20,7 +20,7 @@ export function Step6Share() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="label-caps text-primary mb-2">Step 6</p>
+        <p className="label-caps text-primary mb-2">Step 7</p>
         <h2 className="heading-xl text-base-content">Share your setup</h2>
         <p className="text-body text-base-content/60 mt-3 max-w-lg">
           Show this to your riding buddies!
@@ -31,7 +31,7 @@ export function Step6Share() {
       <div className="card card-border bg-base-100 p-6 space-y-4 print:border-0">
         <div className="text-center">
           <div className="text-small text-base-content/40">
-            {state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
+            {state.bike?.model ? state.bike.model : state.bike?.type} {state.bike?.size}{state.event && <> · {state.event.name}</>}
           </div>
           <div className="text-5xl font-bold font-[var(--font-heading)] tracking-tight mt-1">
             {packing.totalWeightKg.toFixed(1)} kg
@@ -103,6 +103,24 @@ export function Step6Share() {
         <button onClick={() => window.print()} className="btn btn-ghost btn-block border border-base-300">
           Print packing list
         </button>
+
+        {/* Start again — everything stays saved */}
+        <div className="card card-border bg-base-100 p-5 space-y-3">
+          <p className="label-caps text-base-content/40">Not done tweaking?</p>
+          <p className="text-small text-base-content/50">
+            Run through the wizard again — your bike, bags and gear list are all saved, so you only change what you want.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={restartKeepingData} className="btn btn-primary btn-sm flex-1">
+              ↻ Start over (keep my setup)
+            </button>
+            <button
+              onClick={() => { if (window.confirm('Wipe everything and start from scratch?')) resetAll() }}
+              className="btn btn-ghost btn-sm border border-base-300">
+              Start from scratch
+            </button>
+          </div>
+        </div>
 
         {/* CTA */}
         <div className="card bg-gradient-to-br from-primary/10 to-accent/5 border-2 border-primary/15 p-8 text-center space-y-4">

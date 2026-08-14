@@ -12,6 +12,7 @@ export interface BikeSpec {
 export interface Bike {
   type: BikeType
   size: BikeSize
+  model?: string // free text, e.g. "Canyon Grizl CF SL 8"
   weight: number
   frameBagMaxVolume: number
 }
